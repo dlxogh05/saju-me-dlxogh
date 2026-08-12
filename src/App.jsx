@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { buildSajuPrompt } from './buildSajuPrompt'
 import { formatSajuText } from './formatSajuText'
+import { supabase } from './lib/supabase'
 import './App.css'
 
 const LOADING_MESSAGES = [
@@ -70,9 +71,12 @@ function App() {
   const [gender, setGender] = useState('male')
   const [calendar, setCalendar] = useState('양력')
   const [reply, setReply] = useState('')
+  const [resultName, setResultName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
+  const [readings, setReadings] = useState([])
+  const [activeReadingId, setActiveReadingId] = useState(null)
 
   const yearRef = useRef(null)
   const monthRef = useRef(null)
@@ -83,6 +87,24 @@ function App() {
     year.length === 4 && month.length === 2 && day.length === 2
       ? `${year}-${month}-${day}`
       : ''
+
+  async function loadReadings() {
+    const { data, error: fetchError } = await supabase
+      .from('readings')
+      .select('id, name, result, created_at')
+      .order('created_at', { ascending: false })
+
+    if (fetchError) {
+      console.error(fetchError)
+      return
+    }
+
+    setReadings(data ?? [])
+  }
+
+  useEffect(() => {
+    loadReadings()
+  }, [])
 
   useEffect(() => {
     if (!loading) {
@@ -128,6 +150,17 @@ function App() {
     }
   }
 
+  function handleSelectReading(reading) {
+    setActiveReadingId(reading.id)
+    setResultName(reading.name)
+    setReply(reading.result)
+    setError('')
+    setLoading(false)
+    window.requestAnimationFrame(() => {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
   async function handleAsk(e) {
     e.preventDefault()
 
@@ -139,11 +172,42 @@ function App() {
     setLoading(true)
     setError('')
     setReply('')
+    setResultName('')
+    setActiveReadingId(null)
 
     try {
-      const prompt = buildSajuPrompt({ name, birth, time, gender, calendar })
+      const trimmedName = name.trim()
+      const prompt = buildSajuPrompt({
+        name: trimmedName,
+        birth,
+        time,
+        gender,
+        calendar,
+      })
       const text = await askGemini(prompt)
       setReply(text)
+      setResultName(trimmedName)
+
+      const { data, error: saveError } = await supabase
+        .from('readings')
+        .insert({
+          name: trimmedName,
+          birth,
+          birth_time: time || '',
+          gender,
+          calendar,
+          result: text,
+        })
+        .select('id, name, result, created_at')
+        .single()
+
+      if (saveError) {
+        console.error(saveError)
+        setError('해석은 완료됐지만 저장에 실패했습니다.')
+      } else if (data) {
+        setActiveReadingId(data.id)
+        setReadings((prev) => [data, ...prev])
+      }
     } catch (err) {
       setError(err.message ?? '요청에 실패했습니다.')
       console.error(err)
@@ -173,203 +237,236 @@ function App() {
         </div>
       </section>
 
-      <main className="shell">
-        <section
-          className="section section-form"
-          aria-labelledby="form-section-title"
-        >
-          <div className="section-heading">
-            <p className="section-kicker">Input</p>
-            <h2 id="form-section-title" className="section-title">
-              정보 입력
-            </h2>
-          </div>
-
-          <form className="form" onSubmit={handleAsk}>
-            <fieldset className="form-block" aria-labelledby="basic-info-title">
-              <p id="basic-info-title" className="form-block-title">
-                기본 정보
-              </p>
-              <div className="field">
-                <label htmlFor="name">이름</label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="이름을 입력하세요"
-                  autoComplete="name"
-                />
-              </div>
-              {name.trim() && (
-                <p className="name-preview">{name.trim()}님의 사주</p>
-              )}
-            </fieldset>
-
-            <fieldset className="form-block" aria-labelledby="birth-info-title">
-              <p id="birth-info-title" className="form-block-title">
-                출생 정보
-              </p>
-
-              <div className="field">
-                <span className="field-label" id="birth-label">
-                  생년월일
-                </span>
-                <div
-                  className="birth-group"
-                  role="group"
-                  aria-labelledby="birth-label"
-                >
-                  <input
-                    ref={yearRef}
-                    id="birth-year"
-                    className="birth-year"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="bday-year"
-                    placeholder="YYYY"
-                    maxLength={4}
-                    value={year}
-                    onChange={handleYearChange}
-                    aria-label="연도 4자리"
-                  />
-                  <span className="birth-sep" aria-hidden="true">
-                    .
-                  </span>
-                  <input
-                    ref={monthRef}
-                    id="birth-month"
-                    className="birth-month"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="bday-month"
-                    placeholder="MM"
-                    maxLength={2}
-                    value={month}
-                    onChange={handleMonthChange}
-                    onKeyDown={(e) => handleBirthKeyDown('month', e)}
-                    aria-label="월 2자리"
-                  />
-                  <span className="birth-sep" aria-hidden="true">
-                    .
-                  </span>
-                  <input
-                    ref={dayRef}
-                    id="birth-day"
-                    className="birth-day"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="bday-day"
-                    placeholder="DD"
-                    maxLength={2}
-                    value={day}
-                    onChange={handleDayChange}
-                    onKeyDown={(e) => handleBirthKeyDown('day', e)}
-                    aria-label="일 2자리"
-                  />
-                </div>
-              </div>
-
-              <div className="field">
-                <label htmlFor="time">태어난 시간</label>
-                <input
-                  id="time"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                />
-              </div>
-
-              <div className="field-row">
-                <div className="field">
-                  <label htmlFor="gender">성별</label>
-                  <select
-                    id="gender"
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
+      <div className="layout">
+        <aside className="sidebar" aria-labelledby="sidebar-title">
+          <p className="section-kicker">Saved</p>
+          <h2 id="sidebar-title" className="sidebar-title">
+            저장된 사주
+          </h2>
+          {readings.length === 0 ? (
+            <p className="sidebar-empty">아직 저장된 기록이 없습니다.</p>
+          ) : (
+            <ul className="reading-list">
+              {readings.map((reading) => (
+                <li key={reading.id}>
+                  <button
+                    type="button"
+                    className={
+                      reading.id === activeReadingId
+                        ? 'reading-item is-active'
+                        : 'reading-item'
+                    }
+                    onClick={() => handleSelectReading(reading)}
                   >
-                    <option value="male">남성</option>
-                    <option value="female">여성</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor="calendar">달력</label>
-                  <select
-                    id="calendar"
-                    value={calendar}
-                    onChange={(e) => setCalendar(e.target.value)}
-                  >
-                    <option value="양력">양력</option>
-                    <option value="음력">음력</option>
-                  </select>
-                </div>
-              </div>
-            </fieldset>
+                    {reading.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
 
-            {error && (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            )}
-
-            <button className="submit" type="submit" disabled={loading}>
-              {loading ? '해석 중…' : '내 사주 보기'}
-            </button>
-          </form>
-        </section>
-
-        {loading && (
+        <main className="shell">
           <section
-            ref={resultRef}
-            className="section section-result"
-            aria-labelledby="loading-section-title"
-            aria-busy="true"
-          >
-            <div className="result-panel loading-ritual">
-              <div className="ink-ring" aria-hidden="true">
-                <span className="ink-ring-spin" />
-              </div>
-              <h2 id="loading-section-title" className="loading-title">
-                {LOADING_MESSAGES[loadingMsgIndex]}
-              </h2>
-              <p className="loading-lead">
-                잠시만 기다려 주세요. 성격과 기질을 읽는 중입니다.
-              </p>
-              <div className="loading-lines" aria-hidden="true">
-                <div className="skeleton" />
-                <div className="skeleton mid" />
-                <div className="skeleton short" />
-              </div>
-            </div>
-          </section>
-        )}
-
-        {reply && !loading && (
-          <section
-            ref={resultRef}
-            className="section section-result"
-            aria-labelledby="result-section-title"
-            aria-live="polite"
+            className="section section-form"
+            aria-labelledby="form-section-title"
           >
             <div className="section-heading">
-              <p className="section-kicker">Reading</p>
-              <h2 id="result-section-title" className="section-title">
-                해석 결과
+              <p className="section-kicker">Input</p>
+              <h2 id="form-section-title" className="section-title">
+                정보 입력
               </h2>
             </div>
 
-            <article className="result-panel reading">
-              <header className="reading-header">
-                <p className="reading-kicker">기본 차트 해석</p>
-                <h3 className="reading-title">
-                  {name.trim() ? `${name.trim()}님의 사주` : '사주 해석'}
-                </h3>
-              </header>
-              <ReadingBody reply={reply} />
-            </article>
+            <form className="form" onSubmit={handleAsk}>
+              <fieldset className="form-block" aria-labelledby="basic-info-title">
+                <p id="basic-info-title" className="form-block-title">
+                  기본 정보
+                </p>
+                <div className="field">
+                  <label htmlFor="name">이름</label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="이름을 입력하세요"
+                    autoComplete="name"
+                  />
+                </div>
+                {name.trim() && (
+                  <p className="name-preview">{name.trim()}님의 사주</p>
+                )}
+              </fieldset>
+
+              <fieldset className="form-block" aria-labelledby="birth-info-title">
+                <p id="birth-info-title" className="form-block-title">
+                  출생 정보
+                </p>
+
+                <div className="field">
+                  <span className="field-label" id="birth-label">
+                    생년월일
+                  </span>
+                  <div
+                    className="birth-group"
+                    role="group"
+                    aria-labelledby="birth-label"
+                  >
+                    <input
+                      ref={yearRef}
+                      id="birth-year"
+                      className="birth-year"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="bday-year"
+                      placeholder="YYYY"
+                      maxLength={4}
+                      value={year}
+                      onChange={handleYearChange}
+                      aria-label="연도 4자리"
+                    />
+                    <span className="birth-sep" aria-hidden="true">
+                      .
+                    </span>
+                    <input
+                      ref={monthRef}
+                      id="birth-month"
+                      className="birth-month"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="bday-month"
+                      placeholder="MM"
+                      maxLength={2}
+                      value={month}
+                      onChange={handleMonthChange}
+                      onKeyDown={(e) => handleBirthKeyDown('month', e)}
+                      aria-label="월 2자리"
+                    />
+                    <span className="birth-sep" aria-hidden="true">
+                      .
+                    </span>
+                    <input
+                      ref={dayRef}
+                      id="birth-day"
+                      className="birth-day"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="bday-day"
+                      placeholder="DD"
+                      maxLength={2}
+                      value={day}
+                      onChange={handleDayChange}
+                      onKeyDown={(e) => handleBirthKeyDown('day', e)}
+                      aria-label="일 2자리"
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="time">태어난 시간</label>
+                  <input
+                    id="time"
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                  />
+                </div>
+
+                <div className="field-row">
+                  <div className="field">
+                    <label htmlFor="gender">성별</label>
+                    <select
+                      id="gender"
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                    >
+                      <option value="male">남성</option>
+                      <option value="female">여성</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="calendar">달력</label>
+                    <select
+                      id="calendar"
+                      value={calendar}
+                      onChange={(e) => setCalendar(e.target.value)}
+                    >
+                      <option value="양력">양력</option>
+                      <option value="음력">음력</option>
+                    </select>
+                  </div>
+                </div>
+              </fieldset>
+
+              {error && (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <button className="submit" type="submit" disabled={loading}>
+                {loading ? '해석 중…' : '내 사주 보기'}
+              </button>
+            </form>
           </section>
-        )}
-      </main>
+
+          {loading && (
+            <section
+              ref={resultRef}
+              className="section section-result"
+              aria-labelledby="loading-section-title"
+              aria-busy="true"
+            >
+              <div className="result-panel loading-ritual">
+                <div className="ink-ring" aria-hidden="true">
+                  <span className="ink-ring-spin" />
+                </div>
+                <h2 id="loading-section-title" className="loading-title">
+                  {LOADING_MESSAGES[loadingMsgIndex]}
+                </h2>
+                <p className="loading-lead">
+                  잠시만 기다려 주세요. 성격과 기질을 읽는 중입니다.
+                </p>
+                <div className="loading-lines" aria-hidden="true">
+                  <div className="skeleton" />
+                  <div className="skeleton mid" />
+                  <div className="skeleton short" />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {reply && !loading && (
+            <section
+              ref={resultRef}
+              className="section section-result"
+              aria-labelledby="result-section-title"
+              aria-live="polite"
+            >
+              <div className="section-heading">
+                <p className="section-kicker">Reading</p>
+                <h2 id="result-section-title" className="section-title">
+                  해석 결과
+                </h2>
+              </div>
+
+              <article
+                key={activeReadingId ?? 'live'}
+                className="result-panel reading"
+              >
+                <header className="reading-header">
+                  <p className="reading-kicker">기본 차트 해석</p>
+                  <h3 className="reading-title">
+                    {resultName ? `${resultName}님의 사주` : '사주 해석'}
+                  </h3>
+                </header>
+                <ReadingBody reply={reply} />
+              </article>
+            </section>
+          )}
+        </main>
+      </div>
 
       <footer className="site-footer">
         <p>사주 해석은 참고용이며, 절대적인 미래 예언이 아닙니다.</p>
