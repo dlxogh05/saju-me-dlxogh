@@ -18,7 +18,15 @@ dist-ssr
 !.env.example
 .vercel
 .netlify
+
+# Local / agent working files — never commit
 .superpowers/
+docs/superpowers/
+reference/
+public/og/_src/
+public/favicons/_debug*
+public/favicons/_probe*
+public/og/SOURCES.md
 
 # Editor directories and files
 .vscode/*

@@ -145,6 +145,13 @@
   gap: 0.35rem;
 }
 
+.reading-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem;
+  align-items: center;
+}
+
 .reading-item {
   width: 100%;
   padding: 0.55rem 0.65rem;
@@ -169,6 +176,34 @@
 .reading-item.is-active {
   border-left-color: var(--accent);
   background: rgba(139, 30, 30, 0.06);
+}
+
+.reading-actions {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.reading-action {
+  padding: 0.28rem 0.4rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.reading-action:hover {
+  color: var(--ink);
+  background: rgba(28, 22, 16, 0.05);
+}
+
+.reading-action.is-danger:hover {
+  color: var(--danger);
+  background: rgba(138, 31, 31, 0.08);
 }
 
 .shell,

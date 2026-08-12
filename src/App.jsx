@@ -161,6 +161,58 @@ function App() {
     })
   }
 
+  async function handleRenameReading(reading, e) {
+    e.stopPropagation()
+    const next = window.prompt('이름을 수정하세요', reading.name)
+    if (next == null) return
+    const trimmed = next.trim()
+    if (!trimmed || trimmed === reading.name) return
+
+    const { data, error: updateError } = await supabase
+      .from('readings')
+      .update({ name: trimmed })
+      .eq('id', reading.id)
+      .select('id, name, result, created_at')
+      .single()
+
+    if (updateError) {
+      console.error(updateError)
+      setError('이름 수정에 실패했습니다.')
+      return
+    }
+
+    setReadings((prev) =>
+      prev.map((item) => (item.id === reading.id ? data : item)),
+    )
+    if (activeReadingId === reading.id) {
+      setResultName(data.name)
+    }
+  }
+
+  async function handleDeleteReading(reading, e) {
+    e.stopPropagation()
+    const ok = window.confirm(`「${reading.name}」기록을 삭제할까요?`)
+    if (!ok) return
+
+    const { error: deleteError } = await supabase
+      .from('readings')
+      .delete()
+      .eq('id', reading.id)
+
+    if (deleteError) {
+      console.error(deleteError)
+      setError('삭제에 실패했습니다.')
+      return
+    }
+
+    setReadings((prev) => prev.filter((item) => item.id !== reading.id))
+    if (activeReadingId === reading.id) {
+      setActiveReadingId(null)
+      setReply('')
+      setResultName('')
+    }
+  }
+
   async function handleAsk(e) {
     e.preventDefault()
 
@@ -248,7 +300,7 @@ function App() {
           ) : (
             <ul className="reading-list">
               {readings.map((reading) => (
-                <li key={reading.id}>
+                <li key={reading.id} className="reading-row">
                   <button
                     type="button"
                     className={
@@ -260,6 +312,26 @@ function App() {
                   >
                     {reading.name}
                   </button>
+                  <div className="reading-actions">
+                    <button
+                      type="button"
+                      className="reading-action"
+                      onClick={(e) => handleRenameReading(reading, e)}
+                      aria-label={`${reading.name} 이름 수정`}
+                      title="이름 수정"
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="reading-action is-danger"
+                      onClick={(e) => handleDeleteReading(reading, e)}
+                      aria-label={`${reading.name} 삭제`}
+                      title="삭제"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

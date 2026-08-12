@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAJU ME · OG / 파비콘 미리보기</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <style>
+      :root {
+        --ink: #e8d296;
+        --paper: #0a242a;
+        --muted: #9aa7a3;
+        --line: rgba(232, 210, 150, 0.22);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Malgun Gothic", "Noto Sans KR", sans-serif;
+        background: radial-gradient(circle at 30% 20%, #143a42, #07181c 70%);
+        color: var(--ink);
+        line-height: 1.6;
+        padding: 40px 20px 80px;
+      }
+      main { max-width: 1100px; margin: 0 auto; }
+      h1 { font-size: 1.6rem; letter-spacing: 0.08em; margin: 0 0 8px; }
+      .lead { color: var(--muted); margin: 0 0 28px; max-width: 48ch; }
+      .badge {
+        display: inline-block;
+        font-size: 0.85rem;
+        border: 1px solid var(--line);
+        padding: 6px 12px;
+        margin-bottom: 36px;
+        color: var(--muted);
+      }
+      h2 { font-size: 1rem; margin: 40px 0 16px; letter-spacing: 0.08em; color: var(--muted); }
+      .grid { display: grid; gap: 24px; }
+      .og-grid { grid-template-columns: 1fr; }
+      @media (min-width: 900px) { .og-grid { grid-template-columns: 1fr 1fr 1fr; } }
+      .fav-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 420px; }
+      figure { margin: 0; }
+      figure img.og {
+        width: 100%;
+        aspect-ratio: 1200 / 630;
+        object-fit: cover;
+        display: block;
+        border: 1px solid var(--line);
+        background: #000;
+      }
+      figure img.fav {
+        width: 72px;
+        height: 72px;
+        border: 1px solid var(--line);
+        background: #08242a;
+        border-radius: 16px;
+      }
+      figcaption { margin-top: 10px; font-size: 0.9rem; color: var(--muted); }
+      figcaption strong { color: var(--ink); }
+      .note {
+        margin-top: 48px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      a { color: var(--ink); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>OG / 파비콘 후보</h1>
+      <p class="lead">
+        <code>reference/</code>에 담아둔 오행 레퍼런스를 잘라 만든 PNG입니다.
+        파비콘은 오행 휠만 분리한 뒤 원형 실(seal)로 재구성했습니다.
+      </p>
+      <p class="badge">현재 기본: <strong>OG A + favicon A</strong> → <code>/og-image.png</code>, <code>/favicon.png</code></p>
+
+      <h2>Open Graph (1200×630)</h2>
+      <div class="grid og-grid">
+        <figure>
+          <img class="og" src="/og/og-a.png" alt="OG A" />
+          <figcaption><strong>A</strong> — 오행 실 + SAJU ME (기본)</figcaption>
+        </figure>
+        <figure>
+          <img class="og" src="/og/og-b.png" alt="OG B" />
+          <figcaption><strong>B</strong> — 상단 나반 분위기</figcaption>
+        </figure>
+        <figure>
+          <img class="og" src="/og/og-c.png" alt="OG C" />
+          <figcaption><strong>C</strong> — 五行 타이틀 영역</figcaption>
+        </figure>
+      </div>
+
+      <h2>파비콘 (32px 실사용 / 미리보기 72px)</h2>
+      <div class="grid fav-grid">
+        <figure>
+          <img class="fav" src="/favicons/favicon-a.png" width="72" height="72" alt="Favicon A" />
+          <figcaption><strong>A</strong> 기본 휠</figcaption>
+        </figure>
+        <figure>
+          <img class="fav" src="/favicons/favicon-b.png" width="72" height="72" alt="Favicon B" />
+          <figcaption><strong>B</strong> 중앙 확대</figcaption>
+        </figure>
+        <figure>
+          <img class="fav" src="/favicons/favicon-c.png" width="72" height="72" alt="Favicon C" />
+          <figcaption><strong>C</strong> 톤 다운</figcaption>
+        </figure>
+      </div>
+
+      <p class="note">
+        원본 레퍼런스 폴더는 git에 올리지 않습니다. 앱으로: <a href="/">/</a>
+      </p>
+    </main>
+  </body>
+</html>
