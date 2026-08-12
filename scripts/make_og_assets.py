@@ -66,8 +66,9 @@ def build_mark(
     brightness: float = 1.0,
     contrast: float = 1.28,
     sharpness: float = 1.55,
+    bg_rgb: tuple[int, int, int] = (255, 255, 255),
 ) -> Image.Image:
-    """High-res circular gold-on-teal mark."""
+    """High-res circular mark on a solid background (default white for tab visibility)."""
     src = diagram
     if zoom > 1.0:
         w, h = diagram.size
@@ -83,25 +84,28 @@ def build_mark(
     base = ImageEnhance.Brightness(base).enhance(brightness)
     base = base.filter(ImageFilter.UnsharpMask(radius=1.6, percent=140, threshold=2))
 
-    teal = Image.new("RGB", (master, master), (8, 36, 42))
+    plate = Image.new("RGB", (master, master), bg_rgb)
     inset = max(12, master // 36)
     mask = circular_mask(master, inset=inset)
-    composed = Image.composite(base, teal, mask).convert("RGBA")
+    composed = Image.composite(base, plate, mask).convert("RGBA")
 
     ring = Image.new("RGBA", (master, master), (0, 0, 0, 0))
     rd = ImageDraw.Draw(ring)
     w_outer = max(6, master // 70)
     w_inner = max(2, master // 200)
     pad = max(8, master // 90)
+    # Slightly deeper gold for contrast on white
+    gold = (184, 148, 64, 245) if bg_rgb[0] > 200 else (212, 175, 88, 235)
+    gold_soft = (184, 148, 64, 140) if bg_rgb[0] > 200 else (212, 175, 88, 110)
     rd.ellipse(
         (pad, pad, master - 1 - pad, master - 1 - pad),
-        outline=(212, 175, 88, 235),
+        outline=gold,
         width=w_outer,
     )
     pad2 = pad + w_outer + 4
     rd.ellipse(
         (pad2, pad2, master - 1 - pad2, master - 1 - pad2),
-        outline=(212, 175, 88, 110),
+        outline=gold_soft,
         width=w_inner,
     )
     return Image.alpha_composite(composed, ring).convert("RGB")
@@ -118,15 +122,17 @@ def save_sizes(mark: Image.Image, stem_paths: dict[Path, int]) -> None:
 
 
 def make_favicons(diagram: Image.Image) -> None:
-    mark_a = build_mark(diagram, zoom=1.0, brightness=1.05)
-    mark_b = build_mark(diagram, zoom=1.28, brightness=1.08)
-    # C = tone-down default (slightly darker), but sharper / higher px
+    white = (255, 255, 255)
+    mark_a = build_mark(diagram, zoom=1.0, brightness=1.08, bg_rgb=white)
+    mark_b = build_mark(diagram, zoom=1.28, brightness=1.1, bg_rgb=white)
+    # C = tone-down default on white (readable in browser tabs)
     mark_c = build_mark(
         diagram,
         zoom=1.0,
-        brightness=0.88,
-        contrast=1.35,
-        sharpness=1.7,
+        brightness=0.95,
+        contrast=1.4,
+        sharpness=1.75,
+        bg_rgb=white,
     )
 
     # Candidates for preview
@@ -205,7 +211,11 @@ def make_og(src: Image.Image, diagram: Image.Image) -> None:
     canvas = Image.alpha_composite(bg.convert("RGBA"), veil).convert("RGB")
 
     dsize = 430
-    mark = build_mark(diagram, brightness=0.9).resize((dsize, dsize), Image.Resampling.LANCZOS)
+    mark = build_mark(
+        diagram,
+        brightness=0.9,
+        bg_rgb=(8, 36, 42),
+    ).resize((dsize, dsize), Image.Resampling.LANCZOS)
     plate = Image.new("RGBA", (1200, 630), (0, 0, 0, 0))
     dx, dy = 70, (630 - dsize) // 2
     plate.paste(mark.convert("RGBA"), (dx, dy))
@@ -255,8 +265,7 @@ def main() -> None:
     diagram.save(FAV_DIR / "_debug-diagram.png")
     make_favicons(diagram)
     make_og(src, diagram)
-    print("meta title:", OG_TITLE.encode("utf-8", "replace").decode("utf-8"))
-    print("meta desc:", META_DESC.encode("utf-8", "replace").decode("utf-8"))
+    print("done: favicons + og")
 
 
 if __name__ == "__main__":
