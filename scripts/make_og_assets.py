@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -58,6 +59,75 @@ def cover_crop(img: Image.Image, size: tuple[int, int], bias_y: float = 0.2) -> 
     return resized.crop((left, top, left + tw, top + th))
 
 
+def build_line_mark(
+    diagram: Image.Image,
+    zoom: float = 1.0,
+    *,
+    master: int = 1024,
+    tone_down: bool = True,
+) -> Image.Image:
+    """Keep only Wu Xing stroke lines; force pure white behind them."""
+    src = diagram
+    if zoom > 1.0:
+        w, h = diagram.size
+        cw, ch = int(w / zoom), int(h / zoom)
+        left, top = (w - cw) // 2, (h - ch) // 2
+        src = diagram.crop((left, top, left + cw, top + ch))
+
+    base = src.resize((master, master), Image.Resampling.LANCZOS)
+    base = ImageEnhance.Contrast(base).enhance(1.55)
+    arr = np.asarray(base).astype(np.float32)
+    r, g, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
+    lum = 0.3 * r + 0.59 * g + 0.11 * b
+
+    # Local contrast: keep strong strokes, drop faint luopan grid/text
+    blur = np.asarray(
+        Image.fromarray(lum.astype(np.uint8), mode="L").filter(
+            ImageFilter.GaussianBlur(radius=7)
+        )
+    ).astype(np.float32)
+    detail = lum - blur
+
+    lines = (detail > 18) & (lum > 72)
+    # Prefer gold / warm stroke pixels of the Wu Xing wheel
+    goldish = (r > 90) & (g > 70) & ((r + g) > 1.5 * b) & (lum > 58) & (detail > 8)
+    lines |= goldish
+    # Drop isolated speckles
+    mask_img = Image.fromarray((lines.astype(np.uint8) * 255), mode="L")
+    mask_img = mask_img.filter(ImageFilter.MinFilter(3))
+    mask_img = mask_img.filter(ImageFilter.MaxFilter(3))
+    mask_img = mask_img.filter(ImageFilter.MaxFilter(3))  # slight thicken for tab size
+    mask_img = mask_img.filter(ImageFilter.GaussianBlur(0.45))
+    alpha = np.asarray(mask_img).astype(np.float32) / 255.0
+
+    if tone_down:
+        ink = np.array([24, 42, 56], dtype=np.float32)
+    else:
+        ink = np.array([105, 78, 24], dtype=np.float32)
+
+    out = np.full((master, master, 3), 255.0, dtype=np.float32)
+    for c in range(3):
+        out[:, :, c] = out[:, :, c] * (1.0 - alpha) + ink[c] * alpha
+    mark = Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), mode="RGB")
+
+    plate = Image.new("RGB", (master, master), (255, 255, 255))
+    inset = max(10, master // 40)
+    circ = circular_mask(master, inset=inset)
+    mark = Image.composite(mark, plate, circ)
+
+    rgba = mark.convert("RGBA")
+    ring = Image.new("RGBA", (master, master), (0, 0, 0, 0))
+    rd = ImageDraw.Draw(ring)
+    pad = max(8, master // 90)
+    width = max(5, master // 85)
+    rd.ellipse(
+        (pad, pad, master - 1 - pad, master - 1 - pad),
+        outline=(36, 56, 70, 220) if tone_down else (150, 115, 45, 230),
+        width=width,
+    )
+    return Image.alpha_composite(rgba, ring).convert("RGB")
+
+
 def build_mark(
     diagram: Image.Image,
     zoom: float = 1.0,
@@ -66,9 +136,9 @@ def build_mark(
     brightness: float = 1.0,
     contrast: float = 1.28,
     sharpness: float = 1.55,
-    bg_rgb: tuple[int, int, int] = (255, 255, 255),
+    bg_rgb: tuple[int, int, int] = (8, 36, 42),
 ) -> Image.Image:
-    """High-res circular mark on a solid background (default white for tab visibility)."""
+    """Full-color circular mark (used for OG seal on dark canvas)."""
     src = diagram
     if zoom > 1.0:
         w, h = diagram.size
@@ -76,7 +146,6 @@ def build_mark(
         left, top = (w - cw) // 2, (h - ch) // 2
         src = diagram.crop((left, top, left + cw, top + ch))
 
-    # Upscale via intermediate for clearer thin gold lines
     base = src.resize((master, master), Image.Resampling.LANCZOS)
     base = ImageEnhance.Contrast(base).enhance(contrast)
     base = ImageEnhance.Color(base).enhance(1.12)
@@ -94,18 +163,15 @@ def build_mark(
     w_outer = max(6, master // 70)
     w_inner = max(2, master // 200)
     pad = max(8, master // 90)
-    # Slightly deeper gold for contrast on white
-    gold = (184, 148, 64, 245) if bg_rgb[0] > 200 else (212, 175, 88, 235)
-    gold_soft = (184, 148, 64, 140) if bg_rgb[0] > 200 else (212, 175, 88, 110)
     rd.ellipse(
         (pad, pad, master - 1 - pad, master - 1 - pad),
-        outline=gold,
+        outline=(212, 175, 88, 235),
         width=w_outer,
     )
     pad2 = pad + w_outer + 4
     rd.ellipse(
         (pad2, pad2, master - 1 - pad2, master - 1 - pad2),
-        outline=gold_soft,
+        outline=(212, 175, 88, 110),
         width=w_inner,
     )
     return Image.alpha_composite(composed, ring).convert("RGB")
@@ -114,7 +180,6 @@ def build_mark(
 def save_sizes(mark: Image.Image, stem_paths: dict[Path, int]) -> None:
     for path, size in stem_paths.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        # Downscale from 1024 master with LANCZOS for crisp results
         mark.resize((size, size), Image.Resampling.LANCZOS).save(
             path, format="PNG", optimize=True
         )
@@ -122,18 +187,10 @@ def save_sizes(mark: Image.Image, stem_paths: dict[Path, int]) -> None:
 
 
 def make_favicons(diagram: Image.Image) -> None:
-    white = (255, 255, 255)
-    mark_a = build_mark(diagram, zoom=1.0, brightness=1.08, bg_rgb=white)
-    mark_b = build_mark(diagram, zoom=1.28, brightness=1.1, bg_rgb=white)
-    # C = tone-down default on white (readable in browser tabs)
-    mark_c = build_mark(
-        diagram,
-        zoom=1.0,
-        brightness=0.95,
-        contrast=1.4,
-        sharpness=1.75,
-        bg_rgb=white,
-    )
+    # Line-only on white (오행 선만)
+    mark_a = build_line_mark(diagram, zoom=1.0, tone_down=False)
+    mark_b = build_line_mark(diagram, zoom=1.28, tone_down=True)
+    mark_c = build_line_mark(diagram, zoom=1.0, tone_down=True)  # default
 
     # Candidates for preview
     save_sizes(
