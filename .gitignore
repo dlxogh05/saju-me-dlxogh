@@ -18,6 +18,8 @@ dist-ssr
 !.env.example
 .vercel
 .netlify
+*client_secret*.json
+*.apps.googleusercontent.com.json
 
 # Local / agent working files — never commit
 .superpowers/
