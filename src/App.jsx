@@ -77,6 +77,8 @@ function App() {
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   const [readings, setReadings] = useState([])
   const [activeReadingId, setActiveReadingId] = useState(null)
+  const [user, setUser] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
 
   const yearRef = useRef(null)
   const monthRef = useRef(null)
@@ -96,6 +98,7 @@ function App() {
 
     if (fetchError) {
       console.error(fetchError)
+      setError('기록을 불러오지 못했습니다.')
       return
     }
 
@@ -103,8 +106,64 @@ function App() {
   }
 
   useEffect(() => {
-    loadReadings()
+    let cancelled = false
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return
+      setUser(data.session?.user ?? null)
+      setAuthReady(true)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setAuthReady(true)
+    })
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
+
+  useEffect(() => {
+    if (!authReady) return
+    if (!user) {
+      setReadings([])
+      setActiveReadingId(null)
+      return
+    }
+    loadReadings()
+  }, [authReady, user])
+
+  async function handleGoogleLogin() {
+    setError('')
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    })
+    if (oauthError) {
+      console.error(oauthError)
+      setError('Google 로그인에 실패했습니다.')
+    }
+  }
+
+  async function handleLogout() {
+    setError('')
+    const { error: signOutError } = await supabase.auth.signOut()
+    if (signOutError) {
+      console.error(signOutError)
+      setError('로그아웃에 실패했습니다.')
+      return
+    }
+    setReply('')
+    setResultName('')
+    setActiveReadingId(null)
+    setReadings([])
+  }
 
   useEffect(() => {
     if (!loading) {
@@ -163,6 +222,10 @@ function App() {
 
   async function handleRenameReading(reading, e) {
     e.stopPropagation()
+    if (!user) {
+      setError('로그인한 뒤에만 수정할 수 있습니다.')
+      return
+    }
     const next = window.prompt('이름을 수정하세요', reading.name)
     if (next == null) return
     const trimmed = next.trim()
@@ -191,6 +254,10 @@ function App() {
 
   async function handleDeleteReading(reading, e) {
     e.stopPropagation()
+    if (!user) {
+      setError('로그인한 뒤에만 삭제할 수 있습니다.')
+      return
+    }
     const ok = window.confirm(`「${reading.name}」기록을 삭제할까요?`)
     if (!ok) return
 
@@ -240,6 +307,10 @@ function App() {
       setReply(text)
       setResultName(trimmedName)
 
+      if (!user) {
+        return
+      }
+
       const { data, error: saveError } = await supabase
         .from('readings')
         .insert({
@@ -249,13 +320,14 @@ function App() {
           gender,
           calendar,
           result: text,
+          user_id: user.id,
         })
         .select('id, name, result, created_at')
         .single()
 
       if (saveError) {
         console.error(saveError)
-        setError('해석은 완료됐지만 저장에 실패했습니다.')
+        setError('해석은 완료됐지만 저장에 실패했습니다. 다시 로그인해 보세요.')
       } else if (data) {
         setActiveReadingId(data.id)
         setReadings((prev) => [data, ...prev])
@@ -291,11 +363,41 @@ function App() {
 
       <div className="layout">
         <aside className="sidebar" aria-labelledby="sidebar-title">
+          <div className="auth-bar">
+            {user ? (
+              <>
+                <p className="auth-email" title={user.email ?? ''}>
+                  {user.email ?? '로그인됨'}
+                </p>
+                <button
+                  type="button"
+                  className="auth-button"
+                  onClick={handleLogout}
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="auth-button is-primary"
+                onClick={handleGoogleLogin}
+              >
+                Google로 로그인
+              </button>
+            )}
+          </div>
+
           <p className="section-kicker">Saved</p>
           <h2 id="sidebar-title" className="sidebar-title">
             저장된 사주
           </h2>
-          {readings.length === 0 ? (
+          {!user ? (
+            <p className="sidebar-empty">
+              로그인하면 과거 기록이 여기에 남습니다. 비로그인 해석은 새로고침 후
+              사라집니다.
+            </p>
+          ) : readings.length === 0 ? (
             <p className="sidebar-empty">아직 저장된 기록이 없습니다.</p>
           ) : (
             <ul className="reading-list">
