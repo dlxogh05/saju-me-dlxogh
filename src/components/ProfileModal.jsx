@@ -93,6 +93,13 @@ export function ProfileModal({
         aria-modal="true"
         aria-labelledby="profile-modal-title"
       >
+        <img
+          className="mascot mascot--modal"
+          src="/mascot.png"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+        />
         <p className="section-kicker">{isOnboarding ? 'Welcome' : 'Profile'}</p>
         <h2 id="profile-modal-title" className="profile-modal-title">
           {title}

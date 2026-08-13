@@ -630,10 +630,19 @@ function App() {
                 className="result-panel reading"
               >
                 <header className="reading-header">
-                  <p className="reading-kicker">기본 차트 해석</p>
-                  <h3 className="reading-title">
-                    {resultName ? `${resultName}님의 사주` : '사주 해석'}
-                  </h3>
+                  <img
+                    className="mascot mascot--reading"
+                    src="/mascot.png"
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                  />
+                  <div className="reading-header-text">
+                    <p className="reading-kicker">기본 차트 해석</p>
+                    <h3 className="reading-title">
+                      {resultName ? `${resultName}님의 사주` : '사주 해석'}
+                    </h3>
+                  </div>
                 </header>
                 <ReadingBody reply={reply} />
               </article>
