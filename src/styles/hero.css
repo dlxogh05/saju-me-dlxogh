@@ -21,6 +21,26 @@
   touch-action: pan-y;
 }
 
+.hero--atmosphere {
+  min-height: min(52dvh, 460px);
+}
+
+.hero--atmosphere .hero-image {
+  inset: 0;
+  height: 100%;
+  object-position: center 18%;
+}
+
+.hero--atmosphere .hero-veil {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 64%,
+    rgba(243, 238, 228, 0.2) 86%,
+    var(--bg) 100%
+  );
+}
+
 .hero-veil {
   position: absolute;
   inset: 0;
@@ -61,10 +81,6 @@
   line-height: 1.2;
   text-wrap: balance;
   color: var(--ink);
-}
-
-.hero--atmosphere {
-  min-height: min(38dvh, 320px);
 }
 
 .page.is-onboarding .hero {
