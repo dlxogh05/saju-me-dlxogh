@@ -1,4 +1,4 @@
-import { formatSajuText } from '../formatSajuText'
+import { formatSajuText } from '../../lib/formatSajuText'
 
 export function ReadingBody({ reply }) {
   return (
@@ -6,6 +6,7 @@ export function ReadingBody({ reply }) {
       {formatSajuText(reply).map((item, i) =>
         item.type === 'heading' ? (
           <h4 key={`h-${i}`} className="reading-subhead" style={{ '--i': i }}>
+            <span className="reading-subhead-bar" aria-hidden="true" />
             {item.text}
           </h4>
         ) : (

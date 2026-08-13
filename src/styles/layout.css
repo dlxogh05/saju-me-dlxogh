@@ -1,0 +1,101 @@
+.page {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+.layout {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 2rem, 920px);
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 1.75rem;
+  align-items: start;
+  padding: 0.5rem 0 4rem;
+}
+.shell,
+.site-footer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.site-footer {
+  width: min(100% - 2rem, 920px);
+}
+
+.shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2.5rem;
+  max-width: var(--max);
+  justify-self: center;
+  width: 100%;
+}
+
+.section {
+  width: 100%;
+}
+
+.section-heading {
+  margin-bottom: 1.1rem;
+  text-align: left;
+}
+
+.section-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.22rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.site-footer {
+  padding: 0 0 2rem;
+  text-align: center;
+}
+
+.site-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+.app-toast {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  z-index: 40;
+  width: max-content;
+  max-width: calc(100% - 2rem);
+  padding: 0.7rem 1.1rem;
+  background: var(--ink);
+  color: #f7f1e6;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 28px rgba(20, 14, 10, 0.22);
+  transform: translateX(-50%);
+  animation: toast-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.app-toast.is-leaving {
+  animation: toast-out 280ms ease both;
+}

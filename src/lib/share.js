@@ -13,10 +13,48 @@ export function parseShareIdFromPath(pathname) {
   return match ? match[1] : null
 }
 
-export function teaserText(text) {
+export const LOCKED_SECTION_HOOKS = ['치명적인 약점', '특이점', '지금 당장 할 것']
+
+const LOCK_START_HEADINGS = new Set(['약점', '치명적인 약점'])
+
+function headingLine(line) {
+  return String(line)
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/\*\*/g, '')
+    .replace(/[:：.。]\s*$/, '')
+    .trim()
+}
+
+export function guestTeaser(text) {
   const value = String(text ?? '')
-  if (value.length <= 1) return value
-  return value.slice(0, Math.ceil(value.length * 0.5))
+  if (!value) {
+    return { preview: '', lockedTitles: [] }
+  }
+
+  const lines = value.split('\n')
+  const lockIndex = lines.findIndex((line) =>
+    LOCK_START_HEADINGS.has(headingLine(line)),
+  )
+
+  if (lockIndex > 0) {
+    return {
+      preview: lines.slice(0, lockIndex).join('\n').trimEnd(),
+      lockedTitles: LOCKED_SECTION_HOOKS,
+    }
+  }
+
+  if (value.length <= 1) {
+    return { preview: value, lockedTitles: [] }
+  }
+
+  return {
+    preview: value.slice(0, Math.ceil(value.length * 0.5)),
+    lockedTitles: LOCKED_SECTION_HOOKS,
+  }
+}
+
+export function teaserText(text) {
+  return guestTeaser(text).preview
 }
 
 export const PENDING_RESULT_KEY = 'saju-pending-result'

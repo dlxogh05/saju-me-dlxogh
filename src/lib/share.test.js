@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  guestTeaser,
   parseShareIdFromPath,
   resultSharePath,
   resultShareUrl,
@@ -26,5 +27,23 @@ describe('share paths', () => {
   it('keeps the first half of a reading for the guest teaser', () => {
     expect(teaserText('abcdefgh')).toBe('abcd')
     expect(teaserText('abc')).toBe('ab')
+  })
+
+  it('locks from 약점 so the spicy sections stay behind the gate', () => {
+    const reading = [
+      '성격',
+      '차분하다.',
+      '기질과 재능',
+      '끝까지 간다.',
+      '약점',
+      '스스로를 몰아붙인다.',
+      '돋보이는 특징',
+      '원칙이 분명하다.',
+    ].join('\n')
+
+    expect(guestTeaser(reading)).toEqual({
+      preview: '성격\n차분하다.\n기질과 재능\n끝까지 간다.',
+      lockedTitles: ['치명적인 약점', '특이점', '지금 당장 할 것'],
+    })
   })
 })

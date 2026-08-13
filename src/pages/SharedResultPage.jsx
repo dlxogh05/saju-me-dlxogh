@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ReadingBody } from './ReadingBody'
+import { Hero } from '../components/layout/Hero'
+import { SiteFooter } from '../components/layout/SiteFooter'
+import { ReadingBody } from '../components/result/ReadingBody'
+import { SectionHeading } from '../components/ui/SectionHeading'
 import { supabase } from '../lib/supabase'
-import '../App.css'
 
 export function SharedResultPage({ shareId }) {
   const [name, setName] = useState('')
@@ -40,26 +42,10 @@ export function SharedResultPage({ shareId }) {
 
   return (
     <div className="page shared-result-page">
-      <section className="hero hero--shared" aria-labelledby="shared-title">
-        <img
-          className="hero-image"
-          src="/hero-hanok.jpg"
-          alt=""
-          decoding="async"
-        />
-        <div className="hero-veil" aria-hidden="true" />
-        <div className="hero-content">
-          <p className="brand">SAJU ME</p>
-          <h1 id="shared-title" className="hero-title">
-            사주 해석
-          </h1>
-        </div>
-      </section>
+      <Hero titleId="shared-title" compact />
 
       <main className="shell shared-result-shell">
-        {loading && (
-          <p className="sidebar-empty">해석을 불러오는 중</p>
-        )}
+        {loading && <p className="sidebar-empty">해석을 불러오는 중</p>}
 
         {!loading && missing && (
           <section className="section">
@@ -79,21 +65,20 @@ export function SharedResultPage({ shareId }) {
             className="section section-result"
             aria-labelledby="shared-result-title"
           >
-            <div className="section-heading">
-              <p className="section-kicker">Reading</p>
-              <h2 id="shared-result-title" className="section-title">
-                해석 결과
-              </h2>
-            </div>
+            <SectionHeading
+              kicker="Reading"
+              title="해석 결과"
+              titleId="shared-result-title"
+            />
+            <img
+              className="mascot mascot--body"
+              src="/mascot.png"
+              alt=""
+              aria-hidden="true"
+              decoding="async"
+            />
             <article className="result-panel reading">
               <header className="reading-header">
-                <img
-                  className="mascot mascot--reading"
-                  src="/mascot.png"
-                  alt=""
-                  aria-hidden="true"
-                  decoding="async"
-                />
                 <div className="reading-header-text">
                   <p className="reading-kicker">기본 차트 해석</p>
                   <h3 className="reading-title">
@@ -112,9 +97,7 @@ export function SharedResultPage({ shareId }) {
         )}
       </main>
 
-      <footer className="site-footer">
-        <p>사주 해석은 참고용이며, 절대적인 미래 예언이 아닙니다.</p>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

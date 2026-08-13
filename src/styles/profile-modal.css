@@ -1,0 +1,138 @@
+.profile-modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1.25rem 1.25rem;
+  overflow-y: auto;
+}
+
+.profile-modal-layer.is-landing {
+  position: relative;
+  inset: auto;
+  z-index: 5;
+  align-items: flex-start;
+  padding: 4.5rem 1.25rem 3.5rem;
+  margin-top: -4.5rem;
+  overflow: visible;
+}
+
+.profile-modal-layer.is-landing::before {
+  content: '';
+  position: absolute;
+  inset: -28% 0 -8%;
+  background: url('/hero-hanok.jpg') center 58% / cover no-repeat;
+  opacity: 0.42;
+  filter: saturate(0.95);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.profile-modal-layer.is-landing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(243, 238, 228, 0.08) 0%,
+    rgba(250, 247, 240, 0.55) 58%,
+    var(--bg) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.profile-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.profile-modal-layer.is-landing .profile-modal-backdrop {
+  display: none;
+}
+
+.profile-modal-stack {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 32rem);
+  overflow: visible;
+  animation: modal-appear 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.profile-modal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 0;
+  padding: 1.35rem 0 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(20, 14, 10, 0.18);
+}
+
+.profile-modal-layer:not(.is-landing) .profile-modal {
+  max-height: min(70dvh, 38rem);
+  overflow: auto;
+}
+
+.profile-modal-layer.is-landing .profile-modal {
+  max-height: none;
+  overflow: visible;
+}
+
+.profile-modal .section-kicker,
+.profile-modal-title {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.profile-modal-title {
+  margin: 0 0 0.45rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+
+.profile-modal-count {
+  margin: 0 1.5rem 1rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.profile-modal-count span {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.profile-modal-form {
+  animation: none;
+  border: 0;
+  background: transparent;
+}
+
+.profile-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin: 0.2rem 1.4rem 1.3rem;
+}
+
+.profile-modal-actions .submit {
+  width: auto;
+  min-width: 8.5rem;
+  margin: 0;
+}
