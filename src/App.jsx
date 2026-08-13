@@ -286,7 +286,8 @@ function App() {
   }
 
   function handleNewReading() {
-    if (activeReadingId === null) {
+    if (!user) return
+    if (activeReadingId === null && !reply) {
       showToast('이미 사주 해석 화면입니다')
       return
     }
@@ -704,13 +705,15 @@ function App() {
             )}
           </div>
 
-          <button
-            type="button"
-            className="auth-button is-primary new-reading-button"
-            onClick={handleNewReading}
-          >
-            새 사주 해석
-          </button>
+          {user && (
+            <button
+              type="button"
+              className="auth-button is-primary new-reading-button"
+              onClick={handleNewReading}
+            >
+              새 사주 해석
+            </button>
+          )}
 
           <p className="section-kicker">Saved</p>
           <h2 id="sidebar-title" className="sidebar-title">
