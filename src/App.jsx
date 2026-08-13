@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import { ProfileModal } from './components/ProfileModal'
 import { buildSajuPrompt } from './buildSajuPrompt'
 import { formatSajuText } from './formatSajuText'
+import {
+  formatReadingLabel,
+  genderLabel,
+  joinBirth,
+  onlyDigits,
+} from './lib/profile'
 import { supabase } from './lib/supabase'
 import './App.css'
 
@@ -32,10 +39,6 @@ async function askGemini(prompt) {
   }
 
   return data.candidates[0].content.parts[0].text
-}
-
-function onlyDigits(value, max) {
-  return value.replace(/\D/g, '').slice(0, max)
 }
 
 function ReadingBody({ reply }) {
@@ -78,22 +81,32 @@ function App() {
   const [readings, setReadings] = useState([])
   const [activeReadingId, setActiveReadingId] = useState(null)
   const [user, setUser] = useState(null)
-  const [authReady, setAuthReady] = useState(false)
+  const [profile, setProfile] = useState(null)
+  const [profileReady, setProfileReady] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [modalMode, setModalMode] = useState(null)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [heroShift, setHeroShift] = useState(0)
+  const [toast, setToast] = useState('')
+  const [toastLeaving, setToastLeaving] = useState(false)
 
   const yearRef = useRef(null)
   const monthRef = useRef(null)
   const dayRef = useRef(null)
   const resultRef = useRef(null)
+  const formSectionRef = useRef(null)
+  const toastTimerRef = useRef(null)
 
-  const birth =
-    year.length === 4 && month.length === 2 && day.length === 2
-      ? `${year}-${month}-${day}`
-      : ''
+  const birth = joinBirth(year, month, day)
+  const isOnboarding = Boolean(
+    user && profileReady && !profile && !profileError,
+  )
+  const heroOffset = isOnboarding ? 0 : heroShift
 
   async function loadReadings() {
     const { data, error: fetchError } = await supabase
       .from('readings')
-      .select('id, name, result, created_at')
+      .select('id, result, created_at')
       .order('created_at', { ascending: false })
 
     if (fetchError) {
@@ -105,20 +118,58 @@ function App() {
     setReadings(data ?? [])
   }
 
+  async function loadProfile(userId) {
+    setProfileReady(false)
+    setProfileError('')
+    const { data, error: fetchError } = await supabase
+      .from('profiles')
+      .select('name, birth, birth_time, gender, calendar')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (fetchError) {
+      console.error(fetchError)
+      setProfile(null)
+      setProfileError('프로필을 불러오지 못했습니다.')
+      setModalMode(null)
+      setProfileReady(true)
+      return
+    }
+
+    setProfile(data ?? null)
+    setModalMode(data ? null : 'onboarding')
+    setProfileReady(true)
+  }
+
   useEffect(() => {
     let cancelled = false
 
+    function applySession(session) {
+      const nextUser = session?.user ?? null
+      setUser(nextUser)
+      if (!nextUser) {
+        setReadings([])
+        setActiveReadingId(null)
+        setProfile(null)
+        setProfileReady(true)
+        setModalMode(null)
+        setProfileError('')
+        return
+      }
+      loadProfile(nextUser.id)
+      loadReadings()
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return
-      setUser(data.session?.user ?? null)
-      setAuthReady(true)
+      applySession(data.session)
     })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setAuthReady(true)
+      if (cancelled) return
+      applySession(session)
     })
 
     return () => {
@@ -128,14 +179,26 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!authReady) return
-    if (!user) {
-      setReadings([])
-      setActiveReadingId(null)
-      return
+    if (!isOnboarding) return undefined
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
     }
-    loadReadings()
-  }, [authReady, user])
+  }, [isOnboarding])
+
+  useEffect(() => {
+    if (isOnboarding) return undefined
+    function onScroll() {
+      setHeroShift(window.scrollY * 0.28)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [isOnboarding])
+
+  useEffect(() => {
+    return () => window.clearTimeout(toastTimerRef.current)
+  }, [])
 
   async function handleGoogleLogin() {
     setError('')
@@ -163,13 +226,13 @@ function App() {
     setResultName('')
     setActiveReadingId(null)
     setReadings([])
+    setProfile(null)
+    setModalMode(null)
+    setProfileReady(true)
   }
 
   useEffect(() => {
-    if (!loading) {
-      setLoadingMsgIndex(0)
-      return undefined
-    }
+    if (!loading) return undefined
     const id = window.setInterval(() => {
       setLoadingMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length)
     }, 2200)
@@ -209,9 +272,34 @@ function App() {
     }
   }
 
+  function showToast(message) {
+    setToast(message)
+    setToastLeaving(false)
+    window.clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastLeaving(true)
+      toastTimerRef.current = window.setTimeout(() => {
+        setToast('')
+        setToastLeaving(false)
+      }, 280)
+    }, 2400)
+  }
+
+  function handleNewReading() {
+    if (activeReadingId === null) {
+      showToast('이미 사주 해석 화면입니다')
+      return
+    }
+    setActiveReadingId(null)
+    setReply('')
+    setResultName('')
+    setError('')
+    formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   function handleSelectReading(reading) {
     setActiveReadingId(reading.id)
-    setResultName(reading.name)
+    setResultName(profile?.name ?? '')
     setReply(reading.result)
     setError('')
     setLoading(false)
@@ -220,45 +308,13 @@ function App() {
     })
   }
 
-  async function handleRenameReading(reading, e) {
-    e.stopPropagation()
-    if (!user) {
-      setError('로그인한 뒤에만 수정할 수 있습니다.')
-      return
-    }
-    const next = window.prompt('이름을 수정하세요', reading.name)
-    if (next == null) return
-    const trimmed = next.trim()
-    if (!trimmed || trimmed === reading.name) return
-
-    const { data, error: updateError } = await supabase
-      .from('readings')
-      .update({ name: trimmed })
-      .eq('id', reading.id)
-      .select('id, name, result, created_at')
-      .single()
-
-    if (updateError) {
-      console.error(updateError)
-      setError('이름 수정에 실패했습니다.')
-      return
-    }
-
-    setReadings((prev) =>
-      prev.map((item) => (item.id === reading.id ? data : item)),
-    )
-    if (activeReadingId === reading.id) {
-      setResultName(data.name)
-    }
-  }
-
   async function handleDeleteReading(reading, e) {
     e.stopPropagation()
     if (!user) {
       setError('로그인한 뒤에만 삭제할 수 있습니다.')
       return
     }
-    const ok = window.confirm(`「${reading.name}」기록을 삭제할까요?`)
+    const ok = window.confirm('이 기록을 삭제할까요?')
     if (!ok) return
 
     const { error: deleteError } = await supabase
@@ -280,49 +336,91 @@ function App() {
     }
   }
 
+  async function handleSaveProfile(payload) {
+    if (!user) return
+    setProfileSaving(true)
+    setProfileError('')
+    const { data, error: saveError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        name: payload.name,
+        birth: payload.birth,
+        birth_time: payload.birth_time,
+        gender: payload.gender,
+        calendar: payload.calendar,
+      })
+      .select('name, birth, birth_time, gender, calendar')
+      .single()
+
+    setProfileSaving(false)
+
+    if (saveError) {
+      console.error(saveError)
+      setProfileError('프로필 저장에 실패했습니다.')
+      return
+    }
+
+    setProfile(data)
+    setModalMode(null)
+  }
+
+  function handleCancelEdit() {
+    if (modalMode === 'edit') setModalMode(null)
+  }
+
   async function handleAsk(e) {
     e.preventDefault()
 
-    if (!name.trim() || !birth) {
+    const source =
+      user && profile
+        ? {
+            name: profile.name,
+            birth: profile.birth,
+            time: profile.birth_time,
+            gender: profile.gender,
+            calendar: profile.calendar,
+          }
+        : {
+            name: name.trim(),
+            birth,
+            time,
+            gender,
+            calendar,
+          }
+
+    if (!source.name || !source.birth) {
       setError('이름과 생년월일(연·월·일)을 입력해 주세요.')
       return
     }
 
+    if (user && !profile) {
+      setError('프로필을 먼저 저장해 주세요.')
+      return
+    }
+
     setLoading(true)
+    setLoadingMsgIndex(0)
     setError('')
     setReply('')
     setResultName('')
     setActiveReadingId(null)
 
     try {
-      const trimmedName = name.trim()
-      const prompt = buildSajuPrompt({
-        name: trimmedName,
-        birth,
-        time,
-        gender,
-        calendar,
-      })
+      const prompt = buildSajuPrompt(source)
       const text = await askGemini(prompt)
       setReply(text)
-      setResultName(trimmedName)
+      setResultName(source.name)
 
-      if (!user) {
-        return
-      }
+      if (!user) return
 
       const { data, error: saveError } = await supabase
         .from('readings')
         .insert({
-          name: trimmedName,
-          birth,
-          birth_time: time || '',
-          gender,
-          calendar,
           result: text,
           user_id: user.id,
         })
-        .select('id, name, result, created_at')
+        .select('id, result, created_at')
         .single()
 
       if (saveError) {
@@ -340,14 +438,223 @@ function App() {
     }
   }
 
+  function renderFormSection() {
+    if (user && !profileReady) {
+      return <p className="sidebar-empty">프로필을 확인하는 중</p>
+    }
+
+    if (user && profile) {
+      return (
+        <div className="form profile-summary">
+          <div className="form-block">
+            <p className="form-block-title">저장된 정보</p>
+            <p className="profile-summary-name">{profile.name}님의 사주</p>
+            <dl className="profile-summary-list">
+              <div>
+                <dt>생년월일</dt>
+                <dd>{String(profile.birth).replaceAll('-', '.')}</dd>
+              </div>
+              <div>
+                <dt>태어난 시간</dt>
+                <dd>{profile.birth_time}</dd>
+              </div>
+              <div>
+                <dt>성별</dt>
+                <dd>{genderLabel(profile.gender)}</dd>
+              </div>
+              <div>
+                <dt>달력</dt>
+                <dd>{profile.calendar}</dd>
+              </div>
+            </dl>
+          </div>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          {profileError && (
+            <p className="form-error" role="alert">
+              {profileError}
+            </p>
+          )}
+          <div className="profile-modal-actions">
+            <button
+              type="button"
+              className="auth-button"
+              onClick={() => setModalMode('edit')}
+            >
+              프로필 수정
+            </button>
+            <button
+              className="submit"
+              type="button"
+              disabled={loading}
+              onClick={handleAsk}
+            >
+              {loading ? '해석 중…' : '내 사주 보기'}
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (user && profileError) {
+      return (
+        <p className="form-error" role="alert">
+          {profileError}
+        </p>
+      )
+    }
+
+    if (user) {
+      return null
+    }
+
+    return (
+      <form className="form" onSubmit={handleAsk}>
+        <fieldset className="form-block" aria-labelledby="basic-info-title">
+          <p id="basic-info-title" className="form-block-title">
+            기본 정보
+          </p>
+          <div className="field">
+            <label htmlFor="name">이름</label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="이름을 입력하세요"
+              autoComplete="name"
+            />
+          </div>
+          {name.trim() && (
+            <p className="name-preview">{name.trim()}님의 사주</p>
+          )}
+        </fieldset>
+
+        <fieldset className="form-block" aria-labelledby="birth-info-title">
+          <p id="birth-info-title" className="form-block-title">
+            출생 정보
+          </p>
+
+          <div className="field">
+            <span className="field-label" id="birth-label">
+              생년월일
+            </span>
+            <div
+              className="birth-group"
+              role="group"
+              aria-labelledby="birth-label"
+            >
+              <input
+                ref={yearRef}
+                id="birth-year"
+                className="birth-year"
+                type="text"
+                inputMode="numeric"
+                autoComplete="bday-year"
+                placeholder="YYYY"
+                maxLength={4}
+                value={year}
+                onChange={handleYearChange}
+                aria-label="연도 4자리"
+              />
+              <span className="birth-sep" aria-hidden="true">
+                .
+              </span>
+              <input
+                ref={monthRef}
+                id="birth-month"
+                className="birth-month"
+                type="text"
+                inputMode="numeric"
+                autoComplete="bday-month"
+                placeholder="MM"
+                maxLength={2}
+                value={month}
+                onChange={handleMonthChange}
+                onKeyDown={(e) => handleBirthKeyDown('month', e)}
+                aria-label="월 2자리"
+              />
+              <span className="birth-sep" aria-hidden="true">
+                .
+              </span>
+              <input
+                ref={dayRef}
+                id="birth-day"
+                className="birth-day"
+                type="text"
+                inputMode="numeric"
+                autoComplete="bday-day"
+                placeholder="DD"
+                maxLength={2}
+                value={day}
+                onChange={handleDayChange}
+                onKeyDown={(e) => handleBirthKeyDown('day', e)}
+                aria-label="일 2자리"
+              />
+            </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="time">태어난 시간</label>
+            <input
+              id="time"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="gender">성별</label>
+              <select
+                id="gender"
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+              >
+                <option value="male">남성</option>
+                <option value="female">여성</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="calendar">달력</label>
+              <select
+                id="calendar"
+                value={calendar}
+                onChange={(e) => setCalendar(e.target.value)}
+              >
+                <option value="양력">양력</option>
+                <option value="음력">음력</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        <button className="submit" type="submit" disabled={loading}>
+          {loading ? '해석 중…' : '내 사주 보기'}
+        </button>
+      </form>
+    )
+  }
+
   return (
-    <div className="page">
+    <div className={isOnboarding ? 'page is-onboarding' : 'page'}>
       <section className="hero" aria-labelledby="hero-title">
         <img
           className="hero-image"
           src="/hero-hanok.jpg"
           alt=""
           decoding="async"
+          style={{ transform: `translate3d(0, ${heroOffset}px, 0)` }}
         />
         <div className="hero-veil" aria-hidden="true" />
         <div className="hero-content">
@@ -369,6 +676,15 @@ function App() {
                 <p className="auth-email" title={user.email ?? ''}>
                   {user.email ?? '로그인됨'}
                 </p>
+                {profile && (
+                  <button
+                    type="button"
+                    className="auth-button"
+                    onClick={() => setModalMode('edit')}
+                  >
+                    프로필 수정
+                  </button>
+                )}
                 <button
                   type="button"
                   className="auth-button"
@@ -387,6 +703,14 @@ function App() {
               </button>
             )}
           </div>
+
+          <button
+            type="button"
+            className="auth-button is-primary new-reading-button"
+            onClick={handleNewReading}
+          >
+            새 사주 해석
+          </button>
 
           <p className="section-kicker">Saved</p>
           <h2 id="sidebar-title" className="sidebar-title">
@@ -412,23 +736,14 @@ function App() {
                     }
                     onClick={() => handleSelectReading(reading)}
                   >
-                    {reading.name}
+                    {formatReadingLabel(reading.created_at)}
                   </button>
                   <div className="reading-actions">
                     <button
                       type="button"
-                      className="reading-action"
-                      onClick={(e) => handleRenameReading(reading, e)}
-                      aria-label={`${reading.name} 이름 수정`}
-                      title="이름 수정"
-                    >
-                      수정
-                    </button>
-                    <button
-                      type="button"
                       className="reading-action is-danger"
                       onClick={(e) => handleDeleteReading(reading, e)}
-                      aria-label={`${reading.name} 삭제`}
+                      aria-label={`${formatReadingLabel(reading.created_at)} 삭제`}
                       title="삭제"
                     >
                       삭제
@@ -442,147 +757,17 @@ function App() {
 
         <main className="shell">
           <section
+            ref={formSectionRef}
             className="section section-form"
             aria-labelledby="form-section-title"
           >
             <div className="section-heading">
               <p className="section-kicker">Input</p>
               <h2 id="form-section-title" className="section-title">
-                정보 입력
+                {user && profile ? '내 사주' : '정보 입력'}
               </h2>
             </div>
-
-            <form className="form" onSubmit={handleAsk}>
-              <fieldset className="form-block" aria-labelledby="basic-info-title">
-                <p id="basic-info-title" className="form-block-title">
-                  기본 정보
-                </p>
-                <div className="field">
-                  <label htmlFor="name">이름</label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="이름을 입력하세요"
-                    autoComplete="name"
-                  />
-                </div>
-                {name.trim() && (
-                  <p className="name-preview">{name.trim()}님의 사주</p>
-                )}
-              </fieldset>
-
-              <fieldset className="form-block" aria-labelledby="birth-info-title">
-                <p id="birth-info-title" className="form-block-title">
-                  출생 정보
-                </p>
-
-                <div className="field">
-                  <span className="field-label" id="birth-label">
-                    생년월일
-                  </span>
-                  <div
-                    className="birth-group"
-                    role="group"
-                    aria-labelledby="birth-label"
-                  >
-                    <input
-                      ref={yearRef}
-                      id="birth-year"
-                      className="birth-year"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="bday-year"
-                      placeholder="YYYY"
-                      maxLength={4}
-                      value={year}
-                      onChange={handleYearChange}
-                      aria-label="연도 4자리"
-                    />
-                    <span className="birth-sep" aria-hidden="true">
-                      .
-                    </span>
-                    <input
-                      ref={monthRef}
-                      id="birth-month"
-                      className="birth-month"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="bday-month"
-                      placeholder="MM"
-                      maxLength={2}
-                      value={month}
-                      onChange={handleMonthChange}
-                      onKeyDown={(e) => handleBirthKeyDown('month', e)}
-                      aria-label="월 2자리"
-                    />
-                    <span className="birth-sep" aria-hidden="true">
-                      .
-                    </span>
-                    <input
-                      ref={dayRef}
-                      id="birth-day"
-                      className="birth-day"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="bday-day"
-                      placeholder="DD"
-                      maxLength={2}
-                      value={day}
-                      onChange={handleDayChange}
-                      onKeyDown={(e) => handleBirthKeyDown('day', e)}
-                      aria-label="일 2자리"
-                    />
-                  </div>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="time">태어난 시간</label>
-                  <input
-                    id="time"
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                  />
-                </div>
-
-                <div className="field-row">
-                  <div className="field">
-                    <label htmlFor="gender">성별</label>
-                    <select
-                      id="gender"
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                    >
-                      <option value="male">남성</option>
-                      <option value="female">여성</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="calendar">달력</label>
-                    <select
-                      id="calendar"
-                      value={calendar}
-                      onChange={(e) => setCalendar(e.target.value)}
-                    >
-                      <option value="양력">양력</option>
-                      <option value="음력">음력</option>
-                    </select>
-                  </div>
-                </div>
-              </fieldset>
-
-              {error && (
-                <p className="form-error" role="alert">
-                  {error}
-                </p>
-              )}
-
-              <button className="submit" type="submit" disabled={loading}>
-                {loading ? '해석 중…' : '내 사주 보기'}
-              </button>
-            </form>
+            {renderFormSection()}
           </section>
 
           {loading && (
@@ -654,6 +839,27 @@ function App() {
       <footer className="site-footer">
         <p>사주 해석은 참고용이며, 절대적인 미래 예언이 아닙니다.</p>
       </footer>
+
+      {user && modalMode && (
+        <ProfileModal
+          key={modalMode}
+          mode={modalMode}
+          initialProfile={modalMode === 'edit' ? profile : null}
+          saving={profileSaving}
+          error={profileError}
+          onSave={handleSaveProfile}
+          onCancel={handleCancelEdit}
+        />
+      )}
+
+      {toast && (
+        <div
+          className={toastLeaving ? 'app-toast is-leaving' : 'app-toast'}
+          role="status"
+        >
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
