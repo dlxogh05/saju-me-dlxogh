@@ -7,7 +7,7 @@ import {
   readStoredGuest,
   writeStoredGuest,
 } from '../lib/guestStorage'
-import { joinBirth, onlyDigits, splitBirth } from '../lib/profile'
+import { joinBirth, normalizeBirthTime, onlyDigits, splitBirth } from '../lib/profile'
 import {
   clearPendingResult,
   guestTeaser,
@@ -15,7 +15,7 @@ import {
   resultShareUrl,
   writePendingResult,
 } from '../lib/share'
-import { fetchReadingsCount, formatReadingsCount } from '../lib/stats'
+import { fetchReadingsCount } from '../lib/stats'
 import { supabase } from '../lib/supabase'
 import { useToast } from './useToast'
 
@@ -66,6 +66,11 @@ export function useHomePage() {
     (user && profileReady && !profile && !profileError) || showGuestOnboarding,
   )
   const heroOffset = isOnboarding ? 0 : heroShift
+
+  useEffect(() => {
+    document.body.style.overflow = ''
+    document.documentElement.style.overflow = ''
+  }, [])
 
   async function loadReadings() {
     const { data, error: fetchError } = await supabase
@@ -155,15 +160,6 @@ export function useHomePage() {
       cancelled = true
     }
   }, [])
-
-  useEffect(() => {
-    if (!isOnboarding) return undefined
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [isOnboarding])
 
   useEffect(() => {
     if (isOnboarding) return undefined
@@ -315,7 +311,7 @@ export function useHomePage() {
         id: user.id,
         name: payload.name,
         birth: payload.birth,
-        birth_time: payload.birth_time,
+        birth_time: normalizeBirthTime(payload.birth_time),
         gender: payload.gender,
         calendar: payload.calendar,
       })
@@ -340,7 +336,7 @@ export function useHomePage() {
     setYear(parts.year)
     setMonth(parts.month)
     setDay(parts.day)
-    setTime(payload.birth_time)
+    setTime(normalizeBirthTime(payload.birth_time))
     setGender(payload.gender)
     setCalendar(payload.calendar)
     writeStoredGuest(payload)
@@ -348,7 +344,7 @@ export function useHomePage() {
     handleAsk(null, {
       name: payload.name,
       birth: payload.birth,
-      time: payload.birth_time,
+      time: normalizeBirthTime(payload.birth_time),
       gender: payload.gender,
       calendar: payload.calendar,
     })
@@ -426,14 +422,14 @@ export function useHomePage() {
         ? {
             name: profile.name,
             birth: profile.birth,
-            time: profile.birth_time,
+            time: normalizeBirthTime(profile.birth_time),
             gender: profile.gender,
             calendar: profile.calendar,
           }
         : {
             name: name.trim(),
             birth,
-            time,
+            time: normalizeBirthTime(time),
             gender,
             calendar,
           })
@@ -523,7 +519,6 @@ export function useHomePage() {
     toast,
     toastLeaving,
     readingsCount,
-    readingsCountCopy: formatReadingsCount(readingsCount),
     guestInfoReady,
     yearRef,
     monthRef,

@@ -1,4 +1,5 @@
 import { BirthFields } from './BirthFields'
+import { TimeField } from './TimeField'
 
 export function GuestForm({
   name,
@@ -66,15 +67,7 @@ export function GuestForm({
           onBirthKeyDown={onBirthKeyDown}
           autoComplete
         />
-        <div className="field">
-          <label htmlFor="time">태어난 시간</label>
-          <input
-            id="time"
-            type="time"
-            value={time}
-            onChange={onTimeChange}
-          />
-        </div>
+        <TimeField id="time" value={time} onChange={onTimeChange} />
         <div className="field-row">
           <div className="field">
             <label htmlFor="gender">성별</label>

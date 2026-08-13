@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
 import { BirthFields } from '../form/BirthFields'
+import { TimeField } from '../form/TimeField'
 import {
   joinBirth,
+  normalizeBirthTime,
   onlyDigits,
   splitBirth,
   validateProfile,
@@ -56,6 +58,10 @@ export function ProfileModal({
     }
   }
 
+  function handleLayerClick(e) {
+    if (!isOnboarding && e.target === e.currentTarget) onCancel?.()
+  }
+
   function handleBackdropClick() {
     if (!isOnboarding) onCancel?.()
   }
@@ -65,7 +71,7 @@ export function ProfileModal({
     const payload = {
       name: name.trim(),
       birth: joinBirth(year, month, day),
-      birth_time: time,
+      birth_time: normalizeBirthTime(time),
       gender,
       calendar,
     }
@@ -78,18 +84,20 @@ export function ProfileModal({
     onSave(payload)
   }
 
-  const title = isOnboarding ? '사주에 쓸 정보를 입력해 주세요' : '프로필 수정'
   const displayError = localError || error
   const countNumber = Number(readingsCount)
   const showCount = isOnboarding && Number.isFinite(countNumber) && countNumber >= 1
 
   return (
-    <div className={isOnboarding ? 'profile-modal-layer is-landing' : 'profile-modal-layer'}>
+    <div
+      className={isOnboarding ? 'profile-landing' : 'profile-modal-layer'}
+      onClick={handleLayerClick}
+    >
       <button
         type="button"
         className="profile-modal-backdrop"
         aria-label={isOnboarding ? undefined : '닫기'}
-        tabIndex={isOnboarding ? -1 : 0}
+        tabIndex={-1}
         onClick={handleBackdropClick}
       />
       <div
@@ -105,23 +113,37 @@ export function ProfileModal({
           aria-hidden="true"
           decoding="async"
         />
-        <div className="profile-modal">
-          <p className="section-kicker">
-            {isOnboarding ? 'Welcome' : 'Profile'}
-          </p>
-          <h2 id="profile-modal-title" className="profile-modal-title">
-            {title}
-          </h2>
-          {showCount ? (
-            <p className="profile-modal-count">
-              지금까지{' '}
-              <span>{countNumber.toLocaleString('ko-KR')}</span>
-              개의 사주가 펼쳐졌습니다.
-            </p>
-          ) : null}
+        <div className={isOnboarding ? 'profile-modal is-landing' : 'profile-modal'}>
+          {isOnboarding ? (
+            <header className="profile-landing-intro">
+              <p className="brand">SAJU ME</p>
+              <h1 id="profile-modal-title" className="profile-landing-title">
+                사주 해석
+              </h1>
+              <p className="profile-landing-lead">
+                명식을 펼치면, 성격과 기질이 한 편의 글처럼 읽힙니다.
+              </p>
+              {showCount ? (
+                <p className="profile-modal-count">
+                  지금까지{' '}
+                  <span>{countNumber.toLocaleString('ko-KR')}</span>
+                  개의 사주가 펼쳐졌습니다.
+                </p>
+              ) : null}
+            </header>
+          ) : (
+            <>
+              <p className="section-kicker">Profile</p>
+              <h2 id="profile-modal-title" className="profile-modal-title">
+                프로필 수정
+              </h2>
+            </>
+          )}
           <form className="form profile-modal-form" onSubmit={handleSubmit}>
             <fieldset className="form-block">
-              <p className="form-block-title">기본 정보</p>
+              {isOnboarding ? null : (
+                <p className="form-block-title">기본 정보</p>
+              )}
               <div className="field">
                 <label htmlFor="profile-name">이름</label>
                 <input
@@ -136,7 +158,9 @@ export function ProfileModal({
               </div>
             </fieldset>
             <fieldset className="form-block">
-              <p className="form-block-title">출생 정보</p>
+              {isOnboarding ? null : (
+                <p className="form-block-title">출생 정보</p>
+              )}
               <BirthFields
                 labelId="profile-birth-label"
                 yearRef={yearRef}
@@ -150,16 +174,11 @@ export function ProfileModal({
                 onDayChange={(e) => setDay(onlyDigits(e.target.value, 2))}
                 onBirthKeyDown={handleBirthKeyDown}
               />
-              <div className="field">
-                <label htmlFor="profile-time">태어난 시간</label>
-                <input
-                  id="profile-time"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  required
-                />
-              </div>
+              <TimeField
+                id="profile-time"
+                value={time}
+                onChange={setTime}
+              />
               <div className="field-row">
                 <div className="field">
                   <label htmlFor="profile-gender">성별</label>

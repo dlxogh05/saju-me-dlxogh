@@ -38,7 +38,6 @@ export function HomePage() {
     toast,
     toastLeaving,
     readingsCount,
-    readingsCountCopy,
     yearRef,
     monthRef,
     dayRef,
@@ -66,11 +65,7 @@ export function HomePage() {
 
   return (
     <div className={isOnboarding ? 'page is-onboarding' : 'page'}>
-      <Hero
-        offset={heroOffset}
-        readingsCountCopy={readingsCountCopy}
-        showScrollHint={isOnboarding}
-      />
+      <Hero offset={heroOffset} atmosphere={isOnboarding} />
 
       <div className="layout">
         <Sidebar
@@ -108,7 +103,7 @@ export function HomePage() {
             onDayChange={handleDayChange}
             onBirthKeyDown={handleBirthKeyDown}
             time={time}
-            onTimeChange={(e) => setTime(e.target.value)}
+            onTimeChange={setTime}
             gender={gender}
             onGenderChange={(e) => setGender(e.target.value)}
             calendar={calendar}

@@ -123,6 +123,38 @@
   gap: 0.4rem;
 }
 
+.field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.time-unknown {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.time-unknown input {
+  width: 1rem;
+  min-height: 1rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--ink);
+}
+
+.field input:disabled {
+  background: #f3eee4;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 .field label,
 .field-label {
   font-size: 0.75rem;
@@ -191,6 +223,15 @@
   outline: none;
   border-color: var(--ink);
   background: var(--surface);
+}
+
+.field .time-unknown input {
+  width: 1rem;
+  min-height: 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--ink);
 }
 
 .name-preview {

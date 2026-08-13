@@ -5,6 +5,7 @@ import {
   joinBirth,
   onlyDigits,
   splitBirth,
+  timeLabel,
   validateProfile,
 } from './profile.js'
 
@@ -43,10 +44,17 @@ describe('validateProfile', () => {
     expect(validateProfile(valid)).toBe('')
   })
 
-  it('rejects missing name, birth, or time', () => {
+  it('allows unknown birth time', () => {
+    expect(validateProfile({ ...valid, birth_time: '' })).toBe('')
+  })
+
+  it('rejects missing name or birth', () => {
     expect(validateProfile({ ...valid, name: '  ' })).not.toBe('')
     expect(validateProfile({ ...valid, birth: '2007-5-9' })).not.toBe('')
-    expect(validateProfile({ ...valid, birth_time: '' })).not.toBe('')
+  })
+
+  it('rejects a malformed time when one is provided', () => {
+    expect(validateProfile({ ...valid, birth_time: '9:1' })).not.toBe('')
   })
 })
 
@@ -60,5 +68,11 @@ describe('labels', () => {
     expect(formatReadingLabel('2026-08-12T12:16:20.690Z')).toBe(
       '8월 12일 21:16',
     )
+  })
+
+  it('maps unknown time to 시간 모름', () => {
+    expect(timeLabel('14:01')).toBe('14:01')
+    expect(timeLabel('')).toBe('시간 모름')
+    expect(timeLabel(null)).toBe('시간 모름')
   })
 })

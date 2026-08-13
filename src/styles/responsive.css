@@ -29,10 +29,6 @@
 }
 
 @media (max-width: 520px) {
-  .hero {
-    min-height: 100dvh;
-  }
-
   .hero-content {
     padding: 3.5rem 0 2.2rem;
   }
@@ -74,15 +70,13 @@
   .ink-ring-spin,
   .skeleton,
   .profile-modal-stack,
-  .app-toast {
+  .app-toast,
+  .mascot--modal,
+  .mascot--body {
     animation: none;
   }
 
   .hero-image {
     transform: none !important;
-  }
-
-  .mascot--modal {
-    transform: none;
   }
 }

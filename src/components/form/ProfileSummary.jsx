@@ -1,4 +1,4 @@
-import { genderLabel } from '../../lib/profile'
+import { genderLabel, timeLabel } from '../../lib/profile'
 
 export function ProfileSummary({
   profile,
@@ -20,7 +20,7 @@ export function ProfileSummary({
           </div>
           <div>
             <dt>태어난 시간</dt>
-            <dd>{profile.birth_time}</dd>
+            <dd>{timeLabel(profile.birth_time)}</dd>
           </div>
           <div>
             <dt>성별</dt>

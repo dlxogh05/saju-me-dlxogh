@@ -18,7 +18,7 @@ function koreanAge(birth) {
 export function buildSajuPrompt({ name, birth, time, gender, calendar }) {
   const age = koreanAge(birth)
   const ageLine = age == null ? '' : `나이: 만 ${age}세\n`
-  const timeLabel = time ? String(time) : '시간 미상'
+  const timeLabel = time ? String(time) : '시간 모름'
 
   return `return only Korean.
 당신은 사주명리를 평생 보아 온 해석가다. 논리와 구조로 읽고, 냉정·직설적이되 인간 내면에 대한 통찰이 깊다. 장점과 그늘을 함께 말한다. 우스꽝·개그·점집 광고체는 쓰지 않는다.

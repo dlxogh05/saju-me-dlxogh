@@ -15,6 +15,19 @@ export function splitBirth(birth) {
   return { year, month, day }
 }
 
+export function isKnownTime(value) {
+  return TIME_RE.test(String(value ?? '').trim())
+}
+
+export function normalizeBirthTime(value) {
+  const time = String(value ?? '').trim()
+  return TIME_RE.test(time) ? time : ''
+}
+
+export function timeLabel(value) {
+  return isKnownTime(value) ? String(value).trim() : '시간 모름'
+}
+
 export function validateProfile({
   name,
   birth,
@@ -22,14 +35,12 @@ export function validateProfile({
   gender,
   calendar,
 }) {
-  if (!String(name ?? '').trim()) {
-    return '이름과 생년월일, 태어난 시간을 모두 입력해 주세요.'
+  if (!String(name ?? '').trim() || !BIRTH_RE.test(birth)) {
+    return '이름과 생년월일을 입력해 주세요.'
   }
-  if (!BIRTH_RE.test(birth)) {
-    return '이름과 생년월일, 태어난 시간을 모두 입력해 주세요.'
-  }
-  if (!TIME_RE.test(birth_time)) {
-    return '이름과 생년월일, 태어난 시간을 모두 입력해 주세요.'
+  const time = String(birth_time ?? '').trim()
+  if (time && !TIME_RE.test(time)) {
+    return '태어난 시간을 올바르게 입력하거나, 시간 모름을 선택해 주세요.'
   }
   if (gender !== 'male' && gender !== 'female') {
     return '성별을 선택해 주세요.'

@@ -1,7 +1,8 @@
 .hero {
   position: relative;
   width: 100%;
-  min-height: min(100dvh, 920px);
+  min-height: min(42dvh, 380px);
+  flex-shrink: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -16,7 +17,8 @@
   height: 124%;
   object-fit: cover;
   object-position: center 42%;
-  will-change: transform, filter;
+  pointer-events: none;
+  touch-action: pan-y;
 }
 
 .hero-veil {
@@ -24,10 +26,9 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(20, 14, 10, 0.22) 0%,
-    rgba(20, 14, 10, 0.08) 42%,
-    rgba(243, 238, 228, 0.18) 68%,
-    rgba(243, 238, 228, 0.72) 88%,
+    transparent 0%,
+    transparent 48%,
+    rgba(243, 238, 228, 0.28) 78%,
     var(--bg) 100%
   );
   pointer-events: none;
@@ -37,81 +38,38 @@
   position: relative;
   z-index: 1;
   width: min(100% - 2rem, var(--max));
-  padding: 4.5rem 0 2.75rem;
+  padding: 4.5rem 0 2.4rem;
   text-align: center;
   animation: rise 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .brand {
   margin: 0;
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.36em;
-  text-indent: 0.36em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
   color: var(--ink);
 }
 
 .hero-title {
-  margin: 1.15rem 0 0.7rem;
+  margin: 0.55rem 0 0;
   font-family: var(--font-display);
-  font-size: clamp(2.4rem, 7vw, 3.4rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.12;
+  font-size: clamp(2.6rem, 8vw, 3.6rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
   text-wrap: balance;
   color: var(--ink);
 }
 
-.hero-lead {
-  margin: 0 auto;
-  max-width: 30ch;
-  color: var(--muted);
-  font-size: 0.98rem;
-  line-height: 1.75;
-  letter-spacing: 0.01em;
-  font-weight: 500;
-  text-wrap: pretty;
-}
-
-.hero-count {
-  margin: 1.1rem auto 0;
-  max-width: 36ch;
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: 0.86rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  line-height: 1.6;
-  opacity: 0.78;
-}
-
-.hero-scroll-hint {
-  margin: 0.85rem auto 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
+.hero--atmosphere {
+  min-height: min(38dvh, 320px);
 }
 
 .page.is-onboarding .hero {
   position: relative;
   z-index: 1;
-  min-height: 100dvh;
-}
-
-.page.is-onboarding .hero-image {
-  filter: none;
-}
-
-.page.is-onboarding .hero-veil {
-  background: linear-gradient(
-    180deg,
-    rgba(20, 14, 10, 0.1) 0%,
-    rgba(243, 238, 228, 0.08) 42%,
-    rgba(243, 238, 228, 0.42) 72%,
-    var(--bg) 100%
-  );
 }
 
 .page.is-onboarding .layout,
