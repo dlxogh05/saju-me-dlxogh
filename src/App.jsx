@@ -15,6 +15,7 @@ import {
   teaserText,
   writePendingResult,
 } from './lib/share'
+import { fetchReadingsCount, formatReadingsCount } from './lib/stats'
 import { supabase } from './lib/supabase'
 import './App.css'
 
@@ -75,6 +76,7 @@ function App() {
   const [heroShift, setHeroShift] = useState(0)
   const [toast, setToast] = useState('')
   const [toastLeaving, setToastLeaving] = useState(false)
+  const [readingsCount, setReadingsCount] = useState(null)
 
   const yearRef = useRef(null)
   const monthRef = useRef(null)
@@ -163,6 +165,18 @@ function App() {
     return () => {
       cancelled = true
       subscription.unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchReadingsCount(supabase).then((count) => {
+      if (!cancelled) setReadingsCount(count)
+    })
+
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -708,6 +722,8 @@ function App() {
     )
   }
 
+  const readingsCountCopy = formatReadingsCount(readingsCount)
+
   return (
     <div className={isOnboarding ? 'page is-onboarding' : 'page'}>
       <section className="hero" aria-labelledby="hero-title">
@@ -727,6 +743,9 @@ function App() {
           <p className="hero-lead">
             명식을 펼치면, 성격과 기질이 한 편의 글처럼 읽힙니다.
           </p>
+          {readingsCountCopy ? (
+            <p className="hero-count">{readingsCountCopy}</p>
+          ) : null}
         </div>
       </section>
 
