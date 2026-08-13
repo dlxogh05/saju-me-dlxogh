@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { ProfileModal } from './components/ProfileModal'
+import { ReadingBody } from './components/ReadingBody'
 import { buildSajuPrompt } from './buildSajuPrompt'
-import { formatSajuText } from './formatSajuText'
 import {
   formatReadingLabel,
   genderLabel,
   joinBirth,
   onlyDigits,
 } from './lib/profile'
+import {
+  clearPendingResult,
+  readPendingResult,
+  resultShareUrl,
+  teaserText,
+  writePendingResult,
+} from './lib/share'
 import { supabase } from './lib/supabase'
 import './App.css'
 
@@ -41,30 +48,6 @@ async function askGemini(prompt) {
   return data.candidates[0].content.parts[0].text
 }
 
-function ReadingBody({ reply }) {
-  return (
-    <div className="reading-body">
-      {formatSajuText(reply).map((item, i) =>
-        item.type === 'heading' ? (
-          <h4 key={`h-${i}`} className="reading-subhead" style={{ '--i': i }}>
-            {item.text}
-          </h4>
-        ) : (
-          <p key={`p-${i}`} style={{ '--i': i }}>
-            {item.parts.map((part, j) =>
-              part.bold ? (
-                <strong key={j}>{part.text}</strong>
-              ) : (
-                <span key={j}>{part.text}</span>
-              ),
-            )}
-          </p>
-        ),
-      )}
-    </div>
-  )
-}
-
 function App() {
   const [name, setName] = useState('')
   const [year, setYear] = useState('')
@@ -73,13 +56,16 @@ function App() {
   const [time, setTime] = useState('')
   const [gender, setGender] = useState('male')
   const [calendar, setCalendar] = useState('양력')
-  const [reply, setReply] = useState('')
-  const [resultName, setResultName] = useState('')
+  const [reply, setReply] = useState(() => readPendingResult()?.reply ?? '')
+  const [resultName, setResultName] = useState(
+    () => readPendingResult()?.resultName ?? '',
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   const [readings, setReadings] = useState([])
   const [activeReadingId, setActiveReadingId] = useState(null)
+  const [activeShareId, setActiveShareId] = useState(null)
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [profileReady, setProfileReady] = useState(false)
@@ -96,6 +82,7 @@ function App() {
   const resultRef = useRef(null)
   const formSectionRef = useRef(null)
   const toastTimerRef = useRef(null)
+  const pendingSavedRef = useRef(false)
 
   const birth = joinBirth(year, month, day)
   const isOnboarding = Boolean(
@@ -106,7 +93,7 @@ function App() {
   async function loadReadings() {
     const { data, error: fetchError } = await supabase
       .from('readings')
-      .select('id, result, created_at')
+      .select('id, result, created_at, share_id')
       .order('created_at', { ascending: false })
 
     if (fetchError) {
@@ -150,6 +137,7 @@ function App() {
       if (!nextUser) {
         setReadings([])
         setActiveReadingId(null)
+        setActiveShareId(null)
         setProfile(null)
         setProfileReady(true)
         setModalMode(null)
@@ -202,6 +190,7 @@ function App() {
 
   async function handleGoogleLogin() {
     setError('')
+    if (reply) writePendingResult(reply, resultName)
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -225,10 +214,12 @@ function App() {
     setReply('')
     setResultName('')
     setActiveReadingId(null)
+    setActiveShareId(null)
     setReadings([])
     setProfile(null)
     setModalMode(null)
     setProfileReady(true)
+    clearPendingResult()
   }
 
   useEffect(() => {
@@ -292,14 +283,17 @@ function App() {
       return
     }
     setActiveReadingId(null)
+    setActiveShareId(null)
     setReply('')
     setResultName('')
     setError('')
+    clearPendingResult()
     formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   function handleSelectReading(reading) {
     setActiveReadingId(reading.id)
+    setActiveShareId(reading.share_id ?? null)
     setResultName(profile?.name ?? '')
     setReply(reading.result)
     setError('')
@@ -332,6 +326,7 @@ function App() {
     setReadings((prev) => prev.filter((item) => item.id !== reading.id))
     if (activeReadingId === reading.id) {
       setActiveReadingId(null)
+      setActiveShareId(null)
       setReply('')
       setResultName('')
     }
@@ -370,6 +365,65 @@ function App() {
     if (modalMode === 'edit') setModalMode(null)
   }
 
+  useEffect(() => {
+    if (!user || !profile || !reply || activeShareId || pendingSavedRef.current) {
+      return undefined
+    }
+    const pending = readPendingResult()
+    if (!pending?.reply || pending.reply !== reply) return undefined
+
+    pendingSavedRef.current = true
+    supabase
+      .from('readings')
+      .insert({
+        result: reply,
+        user_id: user.id,
+      })
+      .select('id, result, created_at, share_id')
+      .single()
+      .then(({ data, error: saveError }) => {
+        if (saveError) {
+          console.error(saveError)
+          pendingSavedRef.current = false
+          setError('해석은 완료됐지만 저장에 실패했습니다. 다시 로그인해 보세요.')
+          return
+        }
+        if (data) {
+          setActiveReadingId(data.id)
+          setActiveShareId(data.share_id ?? null)
+          setReadings((prev) => [data, ...prev])
+          clearPendingResult()
+        }
+      })
+  }, [user, profile, reply, activeShareId])
+
+  async function handleShare() {
+    if (!user) {
+      showToast('로그인하면 결과를 공유할 수 있습니다')
+      return
+    }
+    if (!activeShareId) {
+      showToast('저장된 결과만 공유할 수 있습니다')
+      return
+    }
+    const url = resultShareUrl(window.location.origin, activeShareId)
+    const title = resultName ? `${resultName}님의 사주` : '사주 해석'
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text: title, url })
+        return
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('공유 링크를 복사했습니다')
+    } catch {
+      showToast('링크 복사에 실패했습니다')
+    }
+  }
+
   async function handleAsk(e) {
     e.preventDefault()
 
@@ -406,6 +460,7 @@ function App() {
     setReply('')
     setResultName('')
     setActiveReadingId(null)
+    setActiveShareId(null)
 
     try {
       const prompt = buildSajuPrompt(source)
@@ -413,7 +468,10 @@ function App() {
       setReply(text)
       setResultName(source.name)
 
-      if (!user) return
+      if (!user) {
+        writePendingResult(text, source.name)
+        return
+      }
 
       const { data, error: saveError } = await supabase
         .from('readings')
@@ -421,15 +479,18 @@ function App() {
           result: text,
           user_id: user.id,
         })
-        .select('id, result, created_at')
+        .select('id, result, created_at, share_id')
         .single()
 
       if (saveError) {
         console.error(saveError)
         setError('해석은 완료됐지만 저장에 실패했습니다. 다시 로그인해 보세요.')
+        writePendingResult(text, source.name)
       } else if (data) {
         setActiveReadingId(data.id)
+        setActiveShareId(data.share_id ?? null)
         setReadings((prev) => [data, ...prev])
+        clearPendingResult()
       }
     } catch (err) {
       setError(err.message ?? '요청에 실패했습니다.')
@@ -815,7 +876,11 @@ function App() {
 
               <article
                 key={activeReadingId ?? 'live'}
-                className="result-panel reading"
+                className={
+                  user
+                    ? 'result-panel reading'
+                    : 'result-panel reading is-teaser'
+                }
               >
                 <header className="reading-header">
                   <img
@@ -831,8 +896,29 @@ function App() {
                       {resultName ? `${resultName}님의 사주` : '사주 해석'}
                     </h3>
                   </div>
+                  <button
+                    type="button"
+                    className="auth-button share-button"
+                    onClick={handleShare}
+                  >
+                    공유
+                  </button>
                 </header>
-                <ReadingBody reply={reply} />
+                <ReadingBody reply={user ? reply : teaserText(reply)} />
+                {!user && (
+                  <div className="result-lock">
+                    <p className="result-lock-copy">
+                      나머지 해석은 로그인하면 이어집니다.
+                    </p>
+                    <button
+                      type="button"
+                      className="submit result-lock-button"
+                      onClick={handleGoogleLogin}
+                    >
+                      Google로 로그인하고 이어서 보기
+                    </button>
+                  </div>
+                )}
               </article>
             </section>
           )}

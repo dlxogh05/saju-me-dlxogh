@@ -803,6 +803,70 @@
   letter-spacing: -0.01em;
 }
 
+.share-button {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.result-panel.reading.is-teaser {
+  position: relative;
+  overflow: hidden;
+}
+
+.result-lock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 5.5rem 1.4rem 1.7rem;
+  background: linear-gradient(
+    180deg,
+    rgba(250, 247, 240, 0) 0%,
+    rgba(250, 247, 240, 0.72) 32%,
+    var(--surface) 68%,
+    var(--bg) 100%
+  );
+  text-align: center;
+}
+
+.result-lock-copy {
+  margin: 0 0 0.9rem;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  letter-spacing: 0.02em;
+}
+
+.result-lock-button {
+  width: auto;
+  min-width: 12rem;
+  margin: 0 auto;
+}
+
+.hero--shared {
+  min-height: min(42dvh, 360px);
+}
+
+.shared-result-shell {
+  width: min(100% - 2rem, 560px);
+  padding-bottom: 3rem;
+}
+
+.shared-result-cta {
+  margin: 1.25rem 0 0;
+  text-align: center;
+}
+
+.shared-result-home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 12rem;
+  margin: 0;
+  text-decoration: none;
+}
+
 .reading-body {
   display: grid;
   gap: 0.95rem;
