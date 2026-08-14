@@ -67,6 +67,8 @@ export function FormSection({
             loading={loading}
             onSubmit={onAsk}
             submitLabel="친구 사주 보기"
+            showTopics
+            onPickTopic={(kind) => onAsk(null, null, kind)}
           />
           <button type="button" className="auth-button" onClick={onBackToMe}>
             내 사주로 돌아가기
@@ -84,7 +86,7 @@ export function FormSection({
           loading={loading}
           onEdit={onEditProfile}
           onFriend={onFriend}
-          onAsk={onAsk}
+          onAsk={(kind) => onAsk(null, null, kind)}
         />
       )
     }

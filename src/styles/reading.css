@@ -155,23 +155,27 @@
 
 .topic-gate {
   margin: 0 1.4rem 1.4rem;
-  padding-top: 1.1rem;
+  padding-top: 1.35rem;
   border-top: 1px solid var(--line);
   display: grid;
-  gap: 0.75rem;
+  gap: 0.7rem;
+}
+
+.topic-gate .section-kicker {
+  margin: 0;
 }
 
 .topic-gate-label {
   margin: 0;
-  font-size: 0.8125rem;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink);
 }
 
-.topic-gate-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
+.topic-gate .topic-seg {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .result-panel.reading.is-teaser {

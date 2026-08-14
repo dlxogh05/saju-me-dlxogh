@@ -1,4 +1,5 @@
 import { genderLabel, timeLabel } from '../../lib/profile'
+import { TopicPick } from './TopicPick'
 
 export function ProfileSummary({
   profile,
@@ -32,6 +33,14 @@ export function ProfileSummary({
             <dd>{profile.calendar}</dd>
           </div>
         </dl>
+        <div className="profile-summary-tools">
+          <button type="button" className="auth-button" onClick={onEdit}>
+            프로필 수정
+          </button>
+          <button type="button" className="auth-button" onClick={onFriend}>
+            친구 사주
+          </button>
+        </div>
       </div>
       {error && (
         <p className="form-error" role="alert">
@@ -43,22 +52,7 @@ export function ProfileSummary({
           {profileError}
         </p>
       )}
-      <div className="profile-modal-actions">
-        <button type="button" className="auth-button" onClick={onEdit}>
-          프로필 수정
-        </button>
-        <button type="button" className="auth-button" onClick={onFriend}>
-          친구 사주 해보기
-        </button>
-        <button
-          className="submit"
-          type="button"
-          disabled={loading}
-          onClick={onAsk}
-        >
-          {loading ? '해석 중…' : '내 사주 보기'}
-        </button>
-      </div>
+      <TopicPick loading={loading} onPick={onAsk} />
     </div>
   )
 }

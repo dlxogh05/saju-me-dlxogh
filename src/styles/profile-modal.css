@@ -217,8 +217,24 @@
   justify-content: center;
 }
 
-.profile-modal.is-landing .profile-modal-actions .submit {
+.profile-landing-login {
+  display: grid;
+  gap: 0.7rem;
   width: 100%;
+  margin-top: 1.15rem;
+}
+
+.profile-landing-login .submit {
+  width: 100%;
+  margin: 0;
+}
+
+.profile-landing-or {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .profile-modal-actions .submit {

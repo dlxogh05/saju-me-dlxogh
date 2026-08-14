@@ -1,5 +1,6 @@
 import { BirthFields } from './BirthFields'
 import { TimeField } from './TimeField'
+import { TopicPick } from './TopicPick'
 
 export function GuestForm({
   name,
@@ -24,6 +25,8 @@ export function GuestForm({
   loading,
   onSubmit,
   submitLabel = '내 사주 보기',
+  showTopics = false,
+  onPickTopic,
 }) {
   return (
     <form className="form" onSubmit={onSubmit}>
@@ -93,9 +96,13 @@ export function GuestForm({
         </p>
       )}
 
-      <button className="submit" type="submit" disabled={loading}>
-        {loading ? '해석 중…' : submitLabel}
-      </button>
+      {showTopics ? (
+        <TopicPick loading={loading} onPick={onPickTopic} />
+      ) : (
+        <button className="submit" type="submit" disabled={loading}>
+          {loading ? '해석 중…' : submitLabel}
+        </button>
+      )}
     </form>
   )
 }

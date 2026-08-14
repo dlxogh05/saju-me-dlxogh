@@ -152,6 +152,7 @@ export function HomePage() {
           onCancel={handleCancelEdit}
           submitLabel={user ? '저장' : '내 사주 보기'}
           readingsCount={readingsCount}
+          onLogin={user ? undefined : handleGoogleLogin}
         />
       )}
 

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { BirthFields } from '../form/BirthFields'
 import { TimeField } from '../form/TimeField'
+import { GoogleMark } from '../icons/GoogleMark'
 import {
   joinBirth,
   normalizeBirthTime,
@@ -18,6 +19,7 @@ export function ProfileModal({
   readingsCount,
   onSave,
   onCancel,
+  onLogin,
 }) {
   const parts = splitBirth(initialProfile?.birth ?? '')
   const [name, setName] = useState(initialProfile?.name ?? '')
@@ -129,6 +131,19 @@ export function ProfileModal({
                   <span>{countNumber.toLocaleString('ko-KR')}</span>
                   개의 사주가 펼쳐졌습니다.
                 </p>
+              ) : null}
+              {onLogin ? (
+                <div className="profile-landing-login">
+                  <button
+                    type="button"
+                    className="submit result-lock-button"
+                    onClick={onLogin}
+                  >
+                    <GoogleMark />
+                    Google로 로그인
+                  </button>
+                  <p className="profile-landing-or">또는 이름만 넣고 먼저 보기</p>
+                </div>
               ) : null}
             </header>
           ) : (
