@@ -1,4 +1,4 @@
-import { formatReadingLabel } from '../../lib/profile'
+import { readingListLabel } from '../../lib/readingSubject'
 
 export function ReadingList({
   user,
@@ -33,14 +33,14 @@ export function ReadingList({
             }
             onClick={() => onSelect(reading)}
           >
-            {formatReadingLabel(reading.created_at)}
+            {readingListLabel(reading)}
           </button>
           <div className="reading-actions">
             <button
               type="button"
               className="reading-action is-danger"
               onClick={(e) => onDelete(reading, e)}
-              aria-label={`${formatReadingLabel(reading.created_at)} 삭제`}
+              aria-label={`${readingListLabel(reading)} 삭제`}
               title="삭제"
             >
               삭제

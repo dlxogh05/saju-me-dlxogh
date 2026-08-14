@@ -9,8 +9,13 @@ import {
 } from '../lib/guestStorage'
 import { joinBirth, normalizeBirthTime, onlyDigits, splitBirth } from '../lib/profile'
 import {
+  READING_SELECT,
+  displayNameFromReading,
+  readingSubjectFromSource,
+  sourceFromReading,
+} from '../lib/readingSubject'
+import {
   clearPendingResult,
-  guestTeaser,
   readPendingResult,
   resultShareUrl,
   writePendingResult,
@@ -49,6 +54,8 @@ export function useHomePage() {
   const [readingsCount, setReadingsCount] = useState(null)
   const [sessionReady, setSessionReady] = useState(false)
   const [guestInfoReady, setGuestInfoReady] = useState(() => hasGuestOnboarded())
+  const [subjectMode, setSubjectMode] = useState('me')
+  const [activeKind, setActiveKind] = useState('basic')
   const { toast, toastLeaving, showToast } = useToast()
 
   const yearRef = useRef(null)
@@ -57,6 +64,7 @@ export function useHomePage() {
   const resultRef = useRef(null)
   const formSectionRef = useRef(null)
   const pendingSavedRef = useRef(false)
+  const lastSubjectRef = useRef(null)
 
   const birth = joinBirth(year, month, day)
   const showGuestOnboarding = Boolean(
@@ -75,7 +83,7 @@ export function useHomePage() {
   async function loadReadings() {
     const { data, error: fetchError } = await supabase
       .from('readings')
-      .select('id, result, created_at, share_id')
+      .select(READING_SELECT)
       .order('created_at', { ascending: false })
 
     if (fetchError) {
@@ -125,6 +133,7 @@ export function useHomePage() {
         setProfileReady(true)
         setModalMode(null)
         setProfileError('')
+        setSubjectMode('me')
         return
       }
       loadProfile(nextUser.id)
@@ -172,7 +181,9 @@ export function useHomePage() {
 
   async function handleGoogleLogin() {
     setError('')
-    if (reply) writePendingResult(reply, resultName)
+    if (reply) {
+      writePendingResult(reply, resultName, lastSubjectRef.current)
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -201,6 +212,9 @@ export function useHomePage() {
     setProfile(null)
     setModalMode(null)
     setProfileReady(true)
+    setSubjectMode('me')
+    setActiveKind('basic')
+    lastSubjectRef.current = null
     clearPendingResult()
   }
 
@@ -256,6 +270,8 @@ export function useHomePage() {
     setReply('')
     setResultName('')
     setError('')
+    setSubjectMode('me')
+    setActiveKind('basic')
     clearPendingResult()
     formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -263,8 +279,9 @@ export function useHomePage() {
   function handleSelectReading(reading) {
     setActiveReadingId(reading.id)
     setActiveShareId(reading.share_id ?? null)
-    setResultName(profile?.name ?? '')
+    setResultName(displayNameFromReading(reading))
     setReply(reading.result)
+    setActiveKind(reading.kind === 'wealth' || reading.kind === 'love' ? reading.kind : 'basic')
     setError('')
     setLoading(false)
     window.requestAnimationFrame(() => {
@@ -298,6 +315,7 @@ export function useHomePage() {
       setActiveShareId(null)
       setReply('')
       setResultName('')
+      setActiveKind('basic')
     }
   }
 
@@ -354,6 +372,24 @@ export function useHomePage() {
     if (modalMode === 'edit') setModalMode(null)
   }
 
+  function handleFriendMode() {
+    setSubjectMode('friend')
+    setName('')
+    setYear('')
+    setMonth('')
+    setDay('')
+    setTime('')
+    setGender('male')
+    setCalendar('양력')
+    setError('')
+    formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function handleBackToMe() {
+    setSubjectMode('me')
+    setError('')
+  }
+
   useEffect(() => {
     if (!user || !profile || !reply || activeShareId || pendingSavedRef.current) {
       return undefined
@@ -361,14 +397,21 @@ export function useHomePage() {
     const pending = readPendingResult()
     if (!pending?.reply || pending.reply !== reply) return undefined
 
+    const pendingSubject = pending.subject ?? lastSubjectRef.current
+    if (!pendingSubject?.subject_name || !pendingSubject?.subject_birth) {
+      return undefined
+    }
+    lastSubjectRef.current = pendingSubject
     pendingSavedRef.current = true
     supabase
       .from('readings')
       .insert({
         result: reply,
         user_id: user.id,
+        kind: 'basic',
+        ...pendingSubject,
       })
-      .select('id, result, created_at, share_id')
+      .select(READING_SELECT)
       .single()
       .then(({ data, error: saveError }) => {
         if (saveError) {
@@ -413,12 +456,37 @@ export function useHomePage() {
     }
   }
 
-  async function handleAsk(e, sourceOverride) {
+  function handleTopicAsk(kind) {
+    if (!user) {
+      handleGoogleLogin()
+      return
+    }
+    const active = readings.find((item) => item.id === activeReadingId)
+    const snapshot = active ?? lastSubjectRef.current
+    const override = snapshot?.subject_name
+      ? sourceFromReading(snapshot)
+      : null
+    handleAsk(null, override, kind)
+  }
+
+  async function handleAsk(e, sourceOverride, kind = 'basic') {
     e?.preventDefault?.()
 
+    if ((kind === 'wealth' || kind === 'love') && !user) {
+      handleGoogleLogin()
+      return
+    }
+
+    const formSource = {
+      name: name.trim(),
+      birth,
+      time: normalizeBirthTime(time),
+      gender,
+      calendar,
+    }
     const source =
       sourceOverride ??
-      (user && profile
+      (user && profile && subjectMode !== 'friend'
         ? {
             name: profile.name,
             birth: profile.birth,
@@ -426,13 +494,7 @@ export function useHomePage() {
             gender: profile.gender,
             calendar: profile.calendar,
           }
-        : {
-            name: name.trim(),
-            birth,
-            time: normalizeBirthTime(time),
-            gender,
-            calendar,
-          })
+        : formSource)
 
     if (!source.name || !source.birth) {
       setError('이름과 생년월일(연·월·일)을 입력해 주세요.')
@@ -444,6 +506,9 @@ export function useHomePage() {
       return
     }
 
+    const subject = readingSubjectFromSource(source)
+    lastSubjectRef.current = subject
+
     setLoading(true)
     setLoadingMsgIndex(0)
     setError('')
@@ -451,15 +516,16 @@ export function useHomePage() {
     setResultName('')
     setActiveReadingId(null)
     setActiveShareId(null)
+    setActiveKind(kind)
 
     try {
-      const prompt = buildSajuPrompt(source)
+      const prompt = buildSajuPrompt({ ...source, kind })
       const text = await askGemini(prompt)
       setReply(text)
       setResultName(source.name)
 
       if (!user) {
-        writePendingResult(text, source.name)
+        writePendingResult(text, source.name, subject)
         return
       }
 
@@ -468,14 +534,16 @@ export function useHomePage() {
         .insert({
           result: text,
           user_id: user.id,
+          kind,
+          ...subject,
         })
-        .select('id, result, created_at, share_id')
+        .select(READING_SELECT)
         .single()
 
       if (saveError) {
         console.error(saveError)
         setError('해석은 완료됐지만 저장에 실패했습니다. 다시 로그인해 보세요.')
-        writePendingResult(text, source.name)
+        writePendingResult(text, source.name, subject)
       } else if (data) {
         setActiveReadingId(data.id)
         setActiveShareId(data.share_id ?? null)
@@ -520,6 +588,8 @@ export function useHomePage() {
     toastLeaving,
     readingsCount,
     guestInfoReady,
+    subjectMode,
+    activeKind,
     yearRef,
     monthRef,
     dayRef,
@@ -528,7 +598,6 @@ export function useHomePage() {
     showGuestOnboarding,
     isOnboarding,
     heroOffset,
-    teaser: !user && reply ? guestTeaser(reply) : null,
     handleGoogleLogin,
     handleLogout,
     handleYearChange,
@@ -541,7 +610,10 @@ export function useHomePage() {
     handleSaveProfile,
     handleGuestOnboardingSave,
     handleCancelEdit,
+    handleFriendMode,
+    handleBackToMe,
     handleShare,
     handleAsk,
+    handleTopicAsk,
   }
 }

@@ -68,16 +68,24 @@ export function readPendingResult() {
     return {
       reply: String(parsed.reply),
       resultName: String(parsed.resultName ?? ''),
+      subject:
+        parsed.subject && typeof parsed.subject === 'object'
+          ? parsed.subject
+          : null,
     }
   } catch {
     return null
   }
 }
 
-export function writePendingResult(reply, resultName) {
+export function writePendingResult(reply, resultName, subject) {
   sessionStorage.setItem(
     PENDING_RESULT_KEY,
-    JSON.stringify({ reply, resultName: resultName ?? '' }),
+    JSON.stringify({
+      reply,
+      resultName: resultName ?? '',
+      subject: subject ?? null,
+    }),
   )
 }
 

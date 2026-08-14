@@ -6,6 +6,7 @@ export function ProfileSummary({
   profileError,
   loading,
   onEdit,
+  onFriend,
   onAsk,
 }) {
   return (
@@ -45,6 +46,9 @@ export function ProfileSummary({
       <div className="profile-modal-actions">
         <button type="button" className="auth-button" onClick={onEdit}>
           프로필 수정
+        </button>
+        <button type="button" className="auth-button" onClick={onFriend}>
+          친구 사주 해보기
         </button>
         <button
           className="submit"

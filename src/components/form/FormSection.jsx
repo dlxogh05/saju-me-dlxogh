@@ -10,6 +10,7 @@ export function FormSection({
   profileError,
   error,
   loading,
+  subjectMode,
   name,
   onNameChange,
   yearRef,
@@ -29,11 +30,49 @@ export function FormSection({
   calendar,
   onCalendarChange,
   onEditProfile,
+  onFriend,
+  onBackToMe,
   onAsk,
 }) {
+  const friendMode = Boolean(user && profile && subjectMode === 'friend')
+
   function renderBody() {
     if (user && !profileReady) {
       return <p className="sidebar-empty">프로필을 확인하는 중</p>
+    }
+
+    if (friendMode) {
+      return (
+        <>
+          <GuestForm
+            name={name}
+            onNameChange={onNameChange}
+            yearRef={yearRef}
+            monthRef={monthRef}
+            dayRef={dayRef}
+            year={year}
+            month={month}
+            day={day}
+            onYearChange={onYearChange}
+            onMonthChange={onMonthChange}
+            onDayChange={onDayChange}
+            onBirthKeyDown={onBirthKeyDown}
+            time={time}
+            onTimeChange={onTimeChange}
+            gender={gender}
+            onGenderChange={onGenderChange}
+            calendar={calendar}
+            onCalendarChange={onCalendarChange}
+            error={error}
+            loading={loading}
+            onSubmit={onAsk}
+            submitLabel="친구 사주 보기"
+          />
+          <button type="button" className="auth-button" onClick={onBackToMe}>
+            내 사주로 돌아가기
+          </button>
+        </>
+      )
     }
 
     if (user && profile) {
@@ -44,6 +83,7 @@ export function FormSection({
           profileError={profileError}
           loading={loading}
           onEdit={onEditProfile}
+          onFriend={onFriend}
           onAsk={onAsk}
         />
       )
@@ -94,7 +134,9 @@ export function FormSection({
     >
       <SectionHeading
         kicker="Input"
-        title={user && profile ? '내 사주' : '정보 입력'}
+        title={
+          friendMode ? '친구 사주' : user && profile ? '내 사주' : '정보 입력'
+        }
         titleId="form-section-title"
       />
       {renderBody()}

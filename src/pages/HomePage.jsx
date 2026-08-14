@@ -38,6 +38,8 @@ export function HomePage() {
     toast,
     toastLeaving,
     readingsCount,
+    subjectMode,
+    activeKind,
     yearRef,
     monthRef,
     dayRef,
@@ -46,7 +48,6 @@ export function HomePage() {
     showGuestOnboarding,
     isOnboarding,
     heroOffset,
-    teaser,
     handleGoogleLogin,
     handleLogout,
     handleYearChange,
@@ -59,8 +60,11 @@ export function HomePage() {
     handleSaveProfile,
     handleGuestOnboardingSave,
     handleCancelEdit,
+    handleFriendMode,
+    handleBackToMe,
     handleShare,
     handleAsk,
+    handleTopicAsk,
   } = useHomePage()
 
   return (
@@ -90,6 +94,7 @@ export function HomePage() {
             profileError={profileError}
             error={error}
             loading={loading}
+            subjectMode={subjectMode}
             name={name}
             onNameChange={(e) => setName(e.target.value)}
             yearRef={yearRef}
@@ -109,6 +114,8 @@ export function HomePage() {
             calendar={calendar}
             onCalendarChange={(e) => setCalendar(e.target.value)}
             onEditProfile={() => setModalMode('edit')}
+            onFriend={handleFriendMode}
+            onBackToMe={handleBackToMe}
             onAsk={handleAsk}
           />
 
@@ -123,9 +130,10 @@ export function HomePage() {
               resultName={resultName}
               activeReadingId={activeReadingId}
               reply={reply}
-              teaser={teaser}
+              kind={activeKind}
               onShare={handleShare}
               onLogin={handleGoogleLogin}
+              onTopic={handleTopicAsk}
             />
           )}
         </main>

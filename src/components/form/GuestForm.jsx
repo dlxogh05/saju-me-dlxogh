@@ -23,6 +23,7 @@ export function GuestForm({
   error,
   loading,
   onSubmit,
+  submitLabel = '내 사주 보기',
 }) {
   return (
     <form className="form" onSubmit={onSubmit}>
@@ -93,7 +94,7 @@ export function GuestForm({
       )}
 
       <button className="submit" type="submit" disabled={loading}>
-        {loading ? '해석 중…' : '내 사주 보기'}
+        {loading ? '해석 중…' : submitLabel}
       </button>
     </form>
   )

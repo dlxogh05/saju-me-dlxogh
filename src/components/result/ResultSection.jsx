@@ -1,6 +1,7 @@
 import { ReadingBody } from './ReadingBody'
-import { ResultLock } from './ResultLock'
 import { SectionHeading } from '../ui/SectionHeading'
+import { TopicGate } from './TopicGate'
+import { READING_KICKERS } from '../../lib/readingSubject'
 
 export function ResultSection({
   resultRef,
@@ -8,9 +9,10 @@ export function ResultSection({
   resultName,
   activeReadingId,
   reply,
-  teaser,
+  kind = 'basic',
   onShare,
   onLogin,
+  onTopic,
 }) {
   return (
     <section
@@ -35,11 +37,13 @@ export function ResultSection({
 
       <article
         key={activeReadingId ?? 'live'}
-        className={user ? 'result-panel reading' : 'result-panel reading is-teaser'}
+        className="result-panel reading"
       >
         <header className="reading-header">
           <div className="reading-header-text">
-            <p className="reading-kicker">기본 차트 해석</p>
+            <p className="reading-kicker">
+              {READING_KICKERS[kind] ?? READING_KICKERS.basic}
+            </p>
             <h3 className="reading-title">
               {resultName ? `${resultName}님의 사주` : '사주 해석'}
             </h3>
@@ -52,10 +56,13 @@ export function ResultSection({
             공유
           </button>
         </header>
-        <ReadingBody reply={user ? reply : teaser.preview} />
-        {!user && teaser && (
-          <ResultLock lockedTitles={teaser.lockedTitles} onLogin={onLogin} />
-        )}
+        <ReadingBody reply={reply} />
+        <TopicGate
+          user={user}
+          currentKind={kind}
+          onLogin={onLogin}
+          onTopic={onTopic}
+        />
       </article>
     </section>
   )
