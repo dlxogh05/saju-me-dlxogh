@@ -129,6 +129,13 @@
   min-width: 0;
 }
 
+.reading-header-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
 .mascot--reading {
   width: clamp(56px, 12vw, 68px);
   height: auto;

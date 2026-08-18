@@ -13,6 +13,7 @@ export function ResultSection({
   onShare,
   onLogin,
   onTopic,
+  onRank,
 }) {
   return (
     <section
@@ -48,13 +49,24 @@ export function ResultSection({
               {resultName ? `${resultName}님의 사주` : '사주 해석'}
             </h3>
           </div>
-          <button
-            type="button"
-            className="auth-button share-button"
-            onClick={onShare}
-          >
-            공유
-          </button>
+          <div className="reading-header-tools">
+            <button
+              type="button"
+              className="auth-button share-button"
+              onClick={onShare}
+            >
+              공유
+            </button>
+            {onRank && (
+              <button
+                type="button"
+                className="auth-button is-primary share-button"
+                onClick={onRank}
+              >
+                줄 세우기
+              </button>
+            )}
+          </div>
         </header>
         <ReadingBody reply={reply} />
         <TopicGate

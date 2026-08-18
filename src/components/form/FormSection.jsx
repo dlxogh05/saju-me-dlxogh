@@ -31,6 +31,7 @@ export function FormSection({
   onCalendarChange,
   onEditProfile,
   onFriend,
+  onRank,
   onBackToMe,
   onAsk,
 }) {
@@ -86,6 +87,7 @@ export function FormSection({
           loading={loading}
           onEdit={onEditProfile}
           onFriend={onFriend}
+          onRank={onRank}
           onAsk={(kind) => onAsk(null, null, kind)}
         />
       )

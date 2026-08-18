@@ -12,6 +12,13 @@ function koreanAge(birth) {
   return age
 }
 
+function personLine({ name, birth, time, gender, calendar }) {
+  const age = koreanAge(birth)
+  const ageLine = age == null ? '' : `나이: 만 ${age}세\n`
+  const timeLabel = time ? String(time) : '시간 모름'
+  return `${ageLine}이름: ${name} / 성별: ${gender} / ${calendar} ${birth} ${timeLabel} 생`
+}
+
 function sharedRules() {
   return `당신은 사주명리를 평생 보아 온 해석가다. 논리와 구조로 읽고, 냉정·직설적이되 인간 내면에 대한 통찰이 깊다. 장점과 그늘을 함께 말한다. 우스꽝·개그·점집 광고체는 쓰지 않는다.
 
@@ -27,6 +34,10 @@ function sharedRules() {
    - 허용 예시: 완충이 적어 긴장이 오래가거나, 스스로를 더 채찍질하기 쉽다.
 6) 대운·세운·월운·시기 예측·인생 조언 설교로 주제를 바꾸지 마라. 올해 연애운·재물운(세운) 이야기를 쓰지 마라.
 7) 마지막은 반드시 소제목 "질문을 던져라" 아래, 거울형 질문 한 문장만. 조언 문단·처세훈을 덧붙이지 마라.
+8) 질병을 진단하지 마라. "○○병이 생긴다" 같은 표현은 금지. 생활 리듬·스트레스로만 말한다.
+9) "부자 사주/가난한 사주"로 재단하지 마라. 투자 판단의 유일한 근거로 쓰지 마라.
+10) "상대방은 반드시 당신을 사랑한다", "반드시 헤어진다" 같은 단정은 하지 마라.
+11) 그늘은 2~3문장 안에 [주의할 가능성] + [왜 그렇게 보는지] + [현실적인 대응]만 담는다.
 
 [출력 공통]
 - 제목용 마크다운(# ##), 기울임, 목록(- * 1.), 코드블록, 백틱은 절대 쓰지 않는다.
@@ -37,9 +48,39 @@ function sharedRules() {
   - 사주 용어·간지·오행·십신명은 절대 볼드하지 않는다.`
 }
 
-function kindInstructions(kind) {
+function synergyInstructions(kind, otherName) {
   if (kind === 'wealth') {
-    return `질문: 이 사람의 원국에서 재물·실리 감각의 경향만 해석해 주세요. 액수·부자/파산·올해 재물운은 금지.
+    return `질문: ${otherName}와 이 사람이 붙었을 때 재물 시너지만 해석해 주세요. 점수 하나로 궁합을 끝내지 마라. 부자 사주/가난한 사주·투자 확정은 금지.
+
+[출력 규칙]
+- 아래 네 소제목만, 이 순서:
+  돈이 모이는 방식
+  새는 자리
+  그늘
+  질문을 던져라
+- 첫 줄은 반드시 "돈이 모이는 방식"이다.
+- 그늘은 2~3문장만.`
+  }
+
+  return `질문: ${otherName}와 이 사람의 관계 시너지만 해석해 주세요. 점수 하나로 궁합을 끝내지 마라. "반드시 헤어진다" 같은 단정은 금지.
+
+[출력 규칙]
+- 아래 네 소제목만, 이 순서:
+  가까워지는 방식
+  부딪히는 지점
+  그늘
+  질문을 던져라
+- 첫 줄은 반드시 "가까워지는 방식"이다.
+- 그늘은 2~3문장만.`
+}
+
+function kindInstructions(kind, otherName) {
+  if (otherName && (kind === 'wealth' || kind === 'love')) {
+    return synergyInstructions(kind, otherName)
+  }
+
+  if (kind === 'wealth') {
+    return `질문: 이 사람의 원국에서 재물·실리 감각의 경향만 해석해 주세요. 액수·부자 사주/가난한 사주·올해 재물운은 금지.
 
 [출력 규칙]
 - 아래 네 소제목만, 이 순서:
@@ -52,7 +93,7 @@ function kindInstructions(kind) {
   }
 
   if (kind === 'love') {
-    return `질문: 이 사람의 원국에서 가까워지는 방식·관계 기질의 경향만 해석해 주세요. 결혼 시기·배우자 외모·올해 연애운은 금지.
+    return `질문: 이 사람의 원국에서 가까워지는 방식·관계 기질의 경향만 해석해 주세요. 결혼 시기·배우자 외모·올해 연애운은 금지. "반드시 헤어진다" 같은 단정은 하지 마라.
 
 [출력 규칙]
 - 아래 네 소제목만, 이 순서:
@@ -66,10 +107,10 @@ function kindInstructions(kind) {
 
   return `질문: 사주를 통해 이 사람의 전반적인 성격, 기질, 재능을 해석해 주세요.
 
-8) 긍정과 그늘을 모두 다루되, 분량은 **공감·강점·재능 중심(전체의 대략 80~85%)**으로 쓴다. 약점은 짧게·부드럽게.
-9) 약점 소제목은 **2~3문장만**. 강점의 대가·그늘로만 말한다.
-10) 돋보이는 특징·특이한 점을 각각 분명히.
-11) 연애·관계 기질과 재물·실리 감각을 "기질과 재능" 안에 짧게(각 1~2문장) 섞어라. 연애/재물용 새 소제목은 만들지 않는다.
+12) 긍정과 그늘을 모두 다루되, 분량은 **공감·강점·재능 중심(전체의 대략 80~85%)**으로 쓴다. 약점은 짧게·부드럽게.
+13) 약점 소제목은 **2~3문장만**. 강점의 대가·그늘로만 말한다.
+14) 돋보이는 특징·특이한 점을 각각 분명히.
+15) 연애·관계 기질과 재물·실리 감각을 "기질과 재능" 안에 짧게(각 1~2문장) 섞어라. 연애/재물용 새 소제목은 만들지 않는다.
 
 [출력 규칙]
 - 아래 여섯 소제목을 빠짐없이, 이 순서만 사용한다:
@@ -89,21 +130,32 @@ export function buildSajuPrompt({
   gender,
   calendar,
   kind = 'basic',
+  other,
 }) {
-  const age = koreanAge(birth)
-  const ageLine = age == null ? '' : `나이: 만 ${age}세\n`
-  const timeLabel = time ? String(time) : '시간 모름'
   const chart = formatSajuChart({ birth, time, calendar })
+  const otherName = String(other?.name ?? '').trim()
+  const otherBlock =
+    otherName && (kind === 'love' || kind === 'wealth')
+      ? `
+
+[상대 차트 · ${otherName}]
+${personLine(other)}
+${formatSajuChart({
+  birth: other.birth,
+  time: other.time ?? other.birth_time,
+  calendar: other.calendar,
+})}`
+      : ''
 
   return `return only Korean.
 ${sharedRules()}
 
-${kindInstructions(kind)}
+${kindInstructions(kind, otherName)}
 
 성별: ${gender}
-${ageLine}이름: ${name} / 성별: ${gender} / ${calendar} ${birth} ${timeLabel} 생
+${personLine({ name, birth, time, gender, calendar })}
 
 [사주 차트]
-${chart}
+${chart}${otherBlock}
 return only Korean.`
 }

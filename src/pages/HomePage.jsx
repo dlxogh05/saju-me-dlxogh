@@ -65,6 +65,8 @@ export function HomePage() {
     handleShare,
     handleAsk,
     handleTopicAsk,
+    handleOpenRank,
+    showingOwnBasic,
   } = useHomePage()
 
   return (
@@ -115,6 +117,7 @@ export function HomePage() {
             onCalendarChange={(e) => setCalendar(e.target.value)}
             onEditProfile={() => setModalMode('edit')}
             onFriend={handleFriendMode}
+            onRank={handleOpenRank}
             onBackToMe={handleBackToMe}
             onAsk={handleAsk}
           />
@@ -134,6 +137,7 @@ export function HomePage() {
               onShare={handleShare}
               onLogin={handleGoogleLogin}
               onTopic={handleTopicAsk}
+              onRank={showingOwnBasic ? handleOpenRank : undefined}
             />
           )}
         </main>

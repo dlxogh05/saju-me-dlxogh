@@ -1,4 +1,5 @@
 const SHARE_PATH_RE = /^\/result\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i
+const RANK_PATH_RE = /^\/n\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i
 
 export function resultSharePath(shareId) {
   return `/result/${shareId}`
@@ -10,6 +11,19 @@ export function resultShareUrl(origin, shareId) {
 
 export function parseShareIdFromPath(pathname) {
   const match = String(pathname ?? '').match(SHARE_PATH_RE)
+  return match ? match[1] : null
+}
+
+export function rankPath(hostId) {
+  return `/n/${hostId}`
+}
+
+export function rankUrl(origin, hostId) {
+  return `${origin}${rankPath(hostId)}`
+}
+
+export function parseRankIdFromPath(pathname) {
+  const match = String(pathname ?? '').match(RANK_PATH_RE)
   return match ? match[1] : null
 }
 

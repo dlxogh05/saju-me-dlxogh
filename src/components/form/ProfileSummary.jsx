@@ -9,6 +9,7 @@ export function ProfileSummary({
   onEdit,
   onFriend,
   onAsk,
+  onRank,
 }) {
   return (
     <div className="form profile-summary">
@@ -40,6 +41,11 @@ export function ProfileSummary({
           <button type="button" className="auth-button" onClick={onFriend}>
             친구 사주
           </button>
+          {onRank && (
+            <button type="button" className="auth-button is-primary" onClick={onRank}>
+              줄 세우기
+            </button>
+          )}
         </div>
       </div>
       {error && (

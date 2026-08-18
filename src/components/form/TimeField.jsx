@@ -1,22 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { isKnownTime } from '../../lib/profile'
 
 export function TimeField({ id, value, onChange }) {
-  const [unknown, setUnknown] = useState(!isKnownTime(value))
-
-  useEffect(() => {
-    if (isKnownTime(value)) setUnknown(false)
-  }, [value])
+  const known = isKnownTime(value)
+  const [cleared, setCleared] = useState(!known)
+  const unknown = !known && cleared
 
   function handleTimeChange(e) {
     const next = e.target.value
-    setUnknown(false)
+    setCleared(false)
     onChange(next)
   }
 
   function handleUnknownChange(e) {
     const nextUnknown = e.target.checked
-    setUnknown(nextUnknown)
+    setCleared(nextUnknown)
     if (nextUnknown) onChange('')
   }
 

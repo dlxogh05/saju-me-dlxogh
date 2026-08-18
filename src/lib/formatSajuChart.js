@@ -42,7 +42,7 @@ function elementCounts(pillars, keys) {
   return ELEMENT_ORDER.map((el) => `${el}${counts[el]}`).join(' ')
 }
 
-export function formatSajuChart({ birth, time, calendar }) {
+export function readSajuChart({ birth, time, calendar }) {
   const { year, month, day } = parseBirth(birth)
   const clock = parseTime(time)
   const result = calculateFourPillars({
@@ -53,8 +53,12 @@ export function formatSajuChart({ birth, time, calendar }) {
     minute: clock.minute,
     isLunar: calendar === '음력',
   })
-
   const keys = clock.known ? PILLAR_KEYS : ['year', 'month', 'day']
+  return { result, clock, keys }
+}
+
+export function formatSajuChart({ birth, time, calendar }) {
+  const { result, clock, keys } = readSajuChart({ birth, time, calendar })
   const hourLine = clock.known
     ? `시주 ${result.hourString}`
     : '시주 없음 (시간 모름)'

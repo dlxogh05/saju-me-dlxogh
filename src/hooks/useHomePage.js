@@ -7,6 +7,7 @@ import {
   readStoredGuest,
   writeStoredGuest,
 } from '../lib/guestStorage'
+import { findReusableReading, isOwnChart, pickDefaultReading } from '../lib/natal'
 import { joinBirth, normalizeBirthTime, onlyDigits, splitBirth } from '../lib/profile'
 import {
   READING_SELECT,
@@ -16,6 +17,7 @@ import {
 } from '../lib/readingSubject'
 import {
   clearPendingResult,
+  rankUrl,
   readPendingResult,
   resultShareUrl,
   writePendingResult,
@@ -65,6 +67,9 @@ export function useHomePage() {
   const formSectionRef = useRef(null)
   const pendingSavedRef = useRef(false)
   const lastSubjectRef = useRef(null)
+  const profileGenRef = useRef(0)
+  const didAutoOpenRef = useRef(false)
+  const skipAutoOpenRef = useRef(Boolean(readPendingResult()?.reply))
 
   const birth = joinBirth(year, month, day)
   const showGuestOnboarding = Boolean(
@@ -80,32 +85,30 @@ export function useHomePage() {
     document.documentElement.style.overflow = ''
   }, [])
 
-  async function loadReadings() {
-    const { data, error: fetchError } = await supabase
-      .from('readings')
-      .select(READING_SELECT)
-      .order('created_at', { ascending: false })
-
-    if (fetchError) {
-      console.error(fetchError)
-      setError('기록을 불러오지 못했습니다.')
-      return
-    }
-
-    setReadings(data ?? [])
-  }
-
-  async function loadProfile(userId) {
+  async function bootstrapUser(userId, gen) {
     setProfileReady(false)
     setProfileError('')
-    const { data, error: fetchError } = await supabase
-      .from('profiles')
-      .select('name, birth, birth_time, gender, calendar')
-      .eq('id', userId)
-      .maybeSingle()
+    const [profileRes, readingsRes] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('name, birth, birth_time, gender, calendar')
+        .eq('id', userId)
+        .maybeSingle(),
+      supabase
+        .from('readings')
+        .select(READING_SELECT)
+        .order('created_at', { ascending: false }),
+    ])
 
-    if (fetchError) {
-      console.error(fetchError)
+    if (gen !== profileGenRef.current) return
+
+    if (readingsRes.error) {
+      console.error(readingsRes.error)
+      setError('기록을 불러오지 못했습니다.')
+    }
+
+    if (profileRes.error) {
+      console.error(profileRes.error)
       setProfile(null)
       setProfileError('프로필을 불러오지 못했습니다.')
       setModalMode(null)
@@ -113,15 +116,48 @@ export function useHomePage() {
       return
     }
 
-    setProfile(data ?? null)
-    setModalMode(data ? null : 'onboarding')
+    const nextProfile = profileRes.data ?? null
+    const nextReadings = readingsRes.data ?? []
+    setProfile(nextProfile)
+    setProfileError('')
+    setReadings(nextReadings)
+    setModalMode(nextProfile ? null : 'onboarding')
+
+    if (!didAutoOpenRef.current && !skipAutoOpenRef.current) {
+      const picked = pickDefaultReading(nextReadings, nextProfile)
+      if (picked) {
+        didAutoOpenRef.current = true
+        setActiveReadingId(picked.id)
+        setActiveShareId(picked.share_id ?? null)
+        setResultName(displayNameFromReading(picked))
+        setReply(picked.result)
+        setActiveKind(
+          picked.kind === 'wealth' || picked.kind === 'love'
+            ? picked.kind
+            : 'basic',
+        )
+        lastSubjectRef.current = {
+          subject_name: picked.subject_name,
+          subject_birth: picked.subject_birth,
+          subject_birth_time: picked.subject_birth_time,
+          subject_gender: picked.subject_gender,
+          subject_calendar: picked.subject_calendar,
+        }
+      }
+    }
+
     setProfileReady(true)
   }
 
   useEffect(() => {
     let cancelled = false
 
-    function applySession(session) {
+    function applySession(session, event) {
+      if (event === 'TOKEN_REFRESHED') {
+        setUser(session?.user ?? null)
+        setSessionReady(true)
+        return
+      }
       const nextUser = session?.user ?? null
       setUser(nextUser)
       setSessionReady(true)
@@ -134,22 +170,21 @@ export function useHomePage() {
         setModalMode(null)
         setProfileError('')
         setSubjectMode('me')
+        didAutoOpenRef.current = false
         return
       }
-      loadProfile(nextUser.id)
-      loadReadings()
+      const gen = ++profileGenRef.current
+      window.setTimeout(() => {
+        if (cancelled || gen !== profileGenRef.current) return
+        bootstrapUser(nextUser.id, gen)
+      }, 0)
     }
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return
-      applySession(data.session)
-    })
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return
-      applySession(session)
+      applySession(session, event)
     })
 
     return () => {
@@ -187,7 +222,7 @@ export function useHomePage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}${window.location.pathname}`,
       },
     })
     if (oauthError) {
@@ -496,6 +531,10 @@ export function useHomePage() {
           }
         : formSource)
 
+    if (user && profile && isOwnChart(profile, source) && subjectMode === 'friend') {
+      setSubjectMode('me')
+    }
+
     if (!source.name || !source.birth) {
       setError('이름과 생년월일(연·월·일)을 입력해 주세요.')
       return
@@ -506,6 +545,23 @@ export function useHomePage() {
       return
     }
 
+    const reusable = user ? findReusableReading(readings, source, kind) : null
+    if (reusable) {
+      lastSubjectRef.current = readingSubjectFromSource(source)
+      setActiveReadingId(reusable.id)
+      setActiveShareId(reusable.share_id ?? null)
+      setResultName(displayNameFromReading(reusable))
+      setReply(reusable.result)
+      setActiveKind(
+        reusable.kind === 'wealth' || reusable.kind === 'love'
+          ? reusable.kind
+          : 'basic',
+      )
+      setError('')
+      setLoading(false)
+      return
+    }
+
     const subject = readingSubjectFromSource(source)
     lastSubjectRef.current = subject
 
@@ -513,13 +569,26 @@ export function useHomePage() {
     setLoadingMsgIndex(0)
     setError('')
     setReply('')
-    setResultName('')
     setActiveReadingId(null)
     setActiveShareId(null)
     setActiveKind(kind)
 
+    const pairOther =
+      user &&
+      profile &&
+      (kind === 'love' || kind === 'wealth') &&
+      !isOwnChart(profile, source)
+        ? {
+            name: profile.name,
+            birth: profile.birth,
+            time: normalizeBirthTime(profile.birth_time),
+            gender: profile.gender,
+            calendar: profile.calendar,
+          }
+        : undefined
+
     try {
-      const prompt = buildSajuPrompt({ ...source, kind })
+      const prompt = buildSajuPrompt({ ...source, kind, other: pairOther })
       const text = await askGemini(prompt)
       setReply(text)
       setResultName(source.name)
@@ -556,6 +625,21 @@ export function useHomePage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const activeReading = readings.find((item) => item.id === activeReadingId)
+  const showingOwnBasic = Boolean(
+    user &&
+      profile &&
+      activeKind === 'basic' &&
+      reply &&
+      activeReading &&
+      isOwnChart(profile, sourceFromReading(activeReading)),
+  )
+
+  function handleOpenRank() {
+    if (!user) return
+    window.location.assign(rankUrl(window.location.origin, user.id))
   }
 
   return {
@@ -615,5 +699,7 @@ export function useHomePage() {
     handleShare,
     handleAsk,
     handleTopicAsk,
+    handleOpenRank,
+    showingOwnBasic,
   }
 }

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   guestTeaser,
+  parseRankIdFromPath,
   parseShareIdFromPath,
+  rankPath,
+  rankUrl,
   resultSharePath,
   resultShareUrl,
   teaserText,
@@ -22,6 +25,17 @@ describe('share paths', () => {
     expect(parseShareIdFromPath(`/result/${id}/`)).toBe(id)
     expect(parseShareIdFromPath('/result/not-a-uuid')).toBe(null)
     expect(parseShareIdFromPath('/')).toBe(null)
+  })
+
+  it('builds and parses a ranking path separately from the main share', () => {
+    expect(rankPath(id)).toBe(`/n/${id}`)
+    expect(rankUrl('https://saju-me-dlxogh.vercel.app', id)).toBe(
+      `https://saju-me-dlxogh.vercel.app/n/${id}`,
+    )
+    expect(parseRankIdFromPath(`/n/${id}`)).toBe(id)
+    expect(parseRankIdFromPath(`/n/${id}/`)).toBe(id)
+    expect(parseRankIdFromPath(`/result/${id}`)).toBe(null)
+    expect(parseRankIdFromPath('/')).toBe(null)
   })
 
   it('keeps the first half of a reading for the guest teaser', () => {
