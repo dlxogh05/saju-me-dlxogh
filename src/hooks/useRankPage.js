@@ -128,7 +128,7 @@ export function useRankPage(hostId) {
         if (cancelled) return
         if (fetchError) {
           console.error(fetchError)
-          setError('줄을 불러오지 못했습니다.')
+          setError('순위를 불러오지 못했습니다.')
           return
         }
         setEntries(data ?? [])
@@ -233,7 +233,7 @@ export function useRankPage(hostId) {
     setSaving(false)
     if (saveError) {
       console.error(saveError)
-      setError('줄에 서지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      setError('순위에 넣지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return
     }
     const row = Array.isArray(data) ? data[0] : data
@@ -253,7 +253,7 @@ export function useRankPage(hostId) {
       setMonth('')
       setDay('')
       setTime('')
-      showToast(`${source.name}님을 줄에 세웠습니다`)
+      showToast(`${source.name}님을 순위에 넣었습니다`)
     }
     setSelectedId(saved.id ?? null)
     if (user) {
@@ -269,8 +269,8 @@ export function useRankPage(hostId) {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `${host?.name ?? ''}님의 줄 세우기`,
-          text: `${host?.name ?? ''}님의 줄에 서 보세요`,
+          title: `${host?.name ?? ''}님의 궁합 순위`,
+          text: `${host?.name ?? ''}님과의 궁합 순위를 확인해 보세요`,
           url,
         })
         return

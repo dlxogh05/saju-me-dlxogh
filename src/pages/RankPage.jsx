@@ -4,11 +4,12 @@ import { SiteFooter } from '../components/layout/SiteFooter'
 import { Toast } from '../components/layout/Toast'
 import { GoogleMark } from '../components/icons/GoogleMark'
 import { SectionHeading } from '../components/ui/SectionHeading'
+import { formatRankPlace } from '../lib/circlePair'
 import { shouldKeepCircleForm } from '../lib/circleForm'
 import { useRankPage } from '../hooks/useRankPage'
 
 const TABS = [
-  { id: 'lineup', label: '줄 세우기' },
+  { id: 'lineup', label: '궁합 순위' },
   { id: 'love', label: '연애' },
   { id: 'wealth', label: '재물' },
 ]
@@ -31,13 +32,13 @@ export function RankPage({ hostId }) {
       <Hero compact />
       <main className="shell rank-shell">
         {page.loadingHost && (
-          <p className="sidebar-empty">줄을 펼치는 중</p>
+          <p className="sidebar-empty">순위를 펼치는 중</p>
         )}
 
         {!page.loadingHost && page.missing && (
           <section className="section">
             <p className="form-error" role="alert">
-              줄을 찾지 못했습니다. 링크가 잘못되었거나 아직 프로필이 없습니다.
+              순위를 찾지 못했습니다. 링크가 잘못되었거나 아직 프로필이 없습니다.
             </p>
             <p>
               <a className="auth-button is-primary" href="/">
@@ -50,16 +51,16 @@ export function RankPage({ hostId }) {
         {!page.loadingHost && page.host && (
           <section className="section" aria-labelledby="rank-title">
             <SectionHeading
-              kicker="Lineup"
-              title={`${page.host.name}님의 줄`}
+              kicker="궁합"
+              title={`${page.host.name}님의 궁합 순위`}
               titleId="rank-title"
             />
             <p className="rank-lead">
-              이름과 생년월일을 직접 넣어도 되고, 링크를 보내 상대가 서게 해도
-              됩니다. 전체 줄은 로그인한 뒤에 열립니다.
+              이름과 생년월일을 직접 넣어도 되고, 링크를 보내 상대가 보게 해도
+              됩니다. 전체 순위는 로그인한 뒤에 열립니다.
             </p>
 
-            <div className="rank-tabs" role="tablist" aria-label="줄과 시너지">
+            <div className="rank-tabs" role="tablist" aria-label="궁합 순위와 시너지">
               {TABS.map((item) => (
                 <button
                   key={item.id}
@@ -84,7 +85,7 @@ export function RankPage({ hostId }) {
                   <div className="form-block">
                     <p className="form-block-title">친구 초대</p>
                     <p className="rank-lead">
-                      직접 넣거나, 이 링크를 보내 상대가 서게 할 수 있습니다.
+                      직접 넣거나, 이 링크를 보내 상대가 순위를 보게 할 수 있습니다.
                     </p>
                     <button
                       type="button"
@@ -122,7 +123,7 @@ export function RankPage({ hostId }) {
                       error={page.error}
                       loading={page.saving}
                       onSubmit={page.handleSubmit}
-                      submitLabel={page.isHost ? '줄에 세우기' : '줄에 서기'}
+                      submitLabel={page.isHost ? '순위에 넣기' : '순위 보기'}
                     />
                   )}
 
@@ -137,7 +138,7 @@ export function RankPage({ hostId }) {
                 {page.canSeeRanks ? (
                   page.ranked.length ? (
                     <ol className="rank-list">
-                      {page.ranked.map((row, index) => (
+                      {page.ranked.map((row) => (
                         <li key={row.id ?? row.name}>
                           <button
                             type="button"
@@ -148,7 +149,9 @@ export function RankPage({ hostId }) {
                             }
                             onClick={() => page.setSelectedId(row.id)}
                           >
-                            <span className="rank-place">{index + 1}</span>
+                            <span className="rank-place">
+                              {formatRankPlace(row.place, row.tied)}
+                            </span>
                             <span>
                               <strong>{row.epithet}</strong>
                               <em>{row.name}</em>
@@ -158,7 +161,7 @@ export function RankPage({ hostId }) {
                       ))}
                     </ol>
                   ) : (
-                    <p className="sidebar-empty">아직 줄에 선 사람이 없습니다.</p>
+                    <p className="sidebar-empty">아직 순위에 오른 사람이 없습니다.</p>
                   )
                 ) : (
                   <>
@@ -169,7 +172,7 @@ export function RankPage({ hostId }) {
                       onClick={page.handleGoogleLogin}
                     >
                       <GoogleMark />
-                      로그인하고 전체 줄 보기
+                      로그인하고 전체 순위 보기
                     </button>
                   </>
                 )}
@@ -194,8 +197,8 @@ export function RankPage({ hostId }) {
                         : page.selected.wealth_line}
                     </p>
                     <p className="rank-lead">
-                      {page.selected.name} · {page.host.name}님과의 자리. 줄은
-                      세우지 않습니다.
+                      {page.selected.name} · {page.host.name}님과의 자리. 순위는
+                      매기지 않습니다.
                     </p>
                   </article>
                 ) : (

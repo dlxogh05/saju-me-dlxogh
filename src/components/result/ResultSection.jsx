@@ -63,7 +63,7 @@ export function ResultSection({
                 className="auth-button is-primary share-button"
                 onClick={onRank}
               >
-                줄 세우기
+                궁합 순위
               </button>
             )}
           </div>

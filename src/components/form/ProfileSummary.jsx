@@ -43,7 +43,7 @@ export function ProfileSummary({
           </button>
           {onRank && (
             <button type="button" className="auth-button is-primary" onClick={onRank}>
-              줄 세우기
+              궁합 순위
             </button>
           )}
         </div>
