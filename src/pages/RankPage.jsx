@@ -4,6 +4,7 @@ import { SiteFooter } from '../components/layout/SiteFooter'
 import { Toast } from '../components/layout/Toast'
 import { GoogleMark } from '../components/icons/GoogleMark'
 import { SectionHeading } from '../components/ui/SectionHeading'
+import { shouldKeepCircleForm } from '../lib/circleForm'
 import { useRankPage } from '../hooks/useRankPage'
 
 const TABS = [
@@ -54,8 +55,8 @@ export function RankPage({ hostId }) {
               titleId="rank-title"
             />
             <p className="rank-lead">
-              생년월일을 넣으면 이 사람과의 자리가 생깁니다. 전체 줄은 로그인한 뒤에
-              열립니다.
+              이름과 생년월일을 직접 넣어도 되고, 링크를 보내 상대가 서게 해도
+              됩니다. 전체 줄은 로그인한 뒤에 열립니다.
             </p>
 
             <div className="rank-tabs" role="tablist" aria-label="줄과 시너지">
@@ -79,12 +80,11 @@ export function RankPage({ hostId }) {
 
             {page.tab === 'lineup' && (
               <div className="rank-panel">
-                {page.isHost ? (
+                {page.isHost && (
                   <div className="form-block">
                     <p className="form-block-title">친구 초대</p>
                     <p className="rank-lead">
-                      이 링크를 보낸 사람만 이 줄에 섭니다. 메인 해석 링크와는
-                      다릅니다.
+                      직접 넣거나, 이 링크를 보내 상대가 서게 할 수 있습니다.
                     </p>
                     <button
                       type="button"
@@ -94,8 +94,12 @@ export function RankPage({ hostId }) {
                       초대 링크 복사
                     </button>
                   </div>
-                ) : (
-                  !page.mine && (
+                )}
+
+                {shouldKeepCircleForm({
+                  isHost: page.isHost,
+                  hasMine: Boolean(page.mine),
+                }) && (
                     <GuestForm
                       name={page.name}
                       onNameChange={(e) => page.setName(e.target.value)}
@@ -118,10 +122,9 @@ export function RankPage({ hostId }) {
                       error={page.error}
                       loading={page.saving}
                       onSubmit={page.handleSubmit}
-                      submitLabel="줄에 서기"
+                      submitLabel={page.isHost ? '줄에 세우기' : '줄에 서기'}
                     />
-                  )
-                )}
+                  )}
 
                 {page.mine && (
                   <article className="rank-mine">
@@ -196,14 +199,14 @@ export function RankPage({ hostId }) {
                     </p>
                   </article>
                 ) : (
-                  <p className="sidebar-empty">
-                    먼저 줄에 서야 이 사람과의 시너지를 볼 수 있습니다.
-                  </p>
+                    <p className="sidebar-empty">
+                      이름과 생년월일을 넣으면 시너지를 볼 수 있습니다.
+                    </p>
                 )}
               </div>
             )}
 
-            {page.error && page.mine && (
+            {page.error && (page.mine || page.isHost) && (
               <p className="form-error" role="alert">
                 {page.error}
               </p>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { comparePair, sortCircle } from '../lib/circlePair'
+import { shouldRecordAsMine } from '../lib/circleForm'
 import { readCircleMine, writeCircleMine } from '../lib/circleStorage'
 import { isOwnChart } from '../lib/natal'
 import {
@@ -243,8 +244,17 @@ export function useRankPage(hostId) {
       gender: source.gender,
       calendar: source.calendar,
     })
-    setMine(saved)
-    writeCircleMine(hostId, saved)
+    if (shouldRecordAsMine(isHost)) {
+      setMine(saved)
+      writeCircleMine(hostId, saved)
+    } else {
+      setName('')
+      setYear('')
+      setMonth('')
+      setDay('')
+      setTime('')
+      showToast(`${source.name}님을 줄에 세웠습니다`)
+    }
     setSelectedId(saved.id ?? null)
     if (user) {
       setEntries((prev) => {
